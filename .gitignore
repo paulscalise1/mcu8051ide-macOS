@@ -17,5 +17,8 @@ build/
 # Distribution / signing script (contains personal signing identity)
 dist.sh
 
+# Built DMGs — upload as GitHub release assets, not committed to repo
+distribution/*.dmg
+
 # Scratch/debug images used during development
 debug_images/
