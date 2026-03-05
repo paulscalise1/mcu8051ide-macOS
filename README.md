@@ -8,6 +8,18 @@ This fork adds full **macOS support** as a self-contained `.app` bundle, along w
 
 ---
 
+## Download
+
+Pre-built universal binaries (Apple Silicon + Intel) are available on the [Releases](../../releases) page.
+
+1. Download `MCU8051IDE-1.4.9.dmg` from the latest release
+2. Open the DMG and drag **MCU8051IDE** to your Applications folder
+3. On first launch, right-click → **Open** to bypass Gatekeeper
+
+That's it — no Homebrew, no Tcl installation, no build steps required. SDCC must be installed separately if you want to compile C code: `brew install sdcc`
+
+---
+
 ## macOS — Quick Start
 
 ### Prerequisites
