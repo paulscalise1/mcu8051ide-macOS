@@ -65,7 +65,7 @@ public method highlight_all {} {
 		# Update progress bar
 		if {![expr {$i % 50}]} {
 			incr ::X::compilation_progress
-			update
+			update idletasks
 		}
 
 		# Conditional abort
@@ -263,7 +263,7 @@ public method getDataAsLaTeX {file} {
 		# Update progress bar
 		if {![expr {$i % 50}]} {
 			incr ::X::compilation_progress
-			update
+			update idletasks
 		}
 
 		set idx [split [lindex $range 0] {.}]	;# Text index
@@ -468,7 +468,7 @@ public method getDataAsXHTML {file} {
 		# Update progress bar
 		if {![expr {$i % 50}]} {
 			incr ::X::compilation_progress
-			update
+			update idletasks
 		}
 
 		# Local variables

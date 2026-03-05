@@ -327,7 +327,7 @@ class InterruptMonitor {
 			}
 		}
 
-		update
+		update idletasks
 	}
 
 	## Collapse all in scrollable frame specifie by the given number
@@ -346,7 +346,7 @@ class InterruptMonitor {
 			}
 		}
 
-		update
+		update idletasks
 	}
 
 	## Collapse / Expand sub window (interrupt details)
@@ -358,7 +358,7 @@ class InterruptMonitor {
 		} else {
 			pack $widget -fill both -padx 2 -pady 2
 		}
-		update
+		update idletasks
 	}
 
 	## Set available interrupt flags

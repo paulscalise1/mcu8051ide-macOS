@@ -3769,7 +3769,7 @@ class Simulator_GUI {
 		if {$frac0 == 0 && $frac1 == 1} {
 			if {[winfo ismapped $scrollbar]} {
 				pack forget $scrollbar
-				update
+				update idletasks
 			}
 		# Show scrollbar
 		} else {
@@ -3781,7 +3781,7 @@ class Simulator_GUI {
 				}
 			}
 			$scrollbar set $frac0 $frac1
-			update
+			update idletasks
 		}
 	}
 

@@ -157,8 +157,14 @@ namespace eval global {
 			-text [mc "Widget style"]			\
 			-helptext [mc "Your preferred widget style"]	\
 		] -row 4 -column 0 -sticky w
+		# On macOS "aqua" is the native theme but the app's hardcoded colors
+		# are incompatible with it — remove it from the list on Darwin.
+		set _theme_list [ttk::style theme names]
+		if {${::tcl_platform(os)} eq {Darwin}} {
+			set _theme_list [lsearch -all -inline -not -exact $_theme_list aqua]
+		}
 		grid [ttk::combobox $middle_frame.cb_style		\
-			-values [ttk::style theme names]		\
+			-values $_theme_list				\
 			-state readonly					\
 			-textvariable ::configDialogues::global::wstyle	\
 		] -row 4 -column 1 -sticky w

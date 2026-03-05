@@ -129,7 +129,7 @@ class Stopwatch {
 		wm iconphoto $win ::ICONS::22::history
 		wm protocol $win WM_DELETE_WINDOW "$this stopwatch_close"
 		wm resizable $win 0 0
-		update
+		update idletasks
 		catch {
 			wm geometry $win [regsub {^\=?\d+x\d+} $window_geometry	\
 				[regsub {\+\d+\+\d+$} [wm geometry $win] {}]	\

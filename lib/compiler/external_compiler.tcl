@@ -40,6 +40,7 @@ namespace eval ExternalCompiler {
 	variable project_dir	;# String: Project directory
 	variable working_dir	;# String: Compiler working directory
 	variable input_file_base;# String: Full file name of the primary source file
+	variable compiler_channel {}	;# Channel: open pipeline channel on macOS (no send)
 
 	## Int: Preffered assembler
 	 # 0 - Native MCU 8051 IDE assembler
@@ -225,6 +226,46 @@ namespace eval ExternalCompiler {
 		}
 	}
 
+	## macOS: Open an external process as a non-blocking channel and wire it
+	 # to the compilation message/complete callbacks via fileevent.
+	 # Tk's built-in 'send' command (used by external_command.tcl) is an
+	 # X11-only mechanism and silently fails on macOS Aqua, so on macOS we
+	 # open the pipeline directly and read it inside the main event loop.
+	 # @parm String shell_cmd  - Command to pass to /bin/sh -c (stderr merged)
+	 # @parm String final_cmd  - Tcl command to call when process finishes
+	 # @return List - PID(s) of the spawned process(es)
+	proc _macos_open_compiler {shell_cmd final_cmd} {
+		variable compiler_channel
+		set fd [open "|/bin/sh -c [list $shell_cmd] 2>@1" r]
+		set compiler_channel $fd
+		fconfigure $fd -blocking 0 -buffering line
+		fileevent $fd readable [list ::ExternalCompiler::_macos_compiler_readable $fd $final_cmd]
+		return [pid $fd]
+	}
+
+	## macOS: fileevent readable handler for a compiler pipeline channel.
+	proc _macos_compiler_readable {fd final_cmd} {
+		variable compiler_channel
+		if {[eof $fd]} {
+			fileevent $fd readable {}
+			catch {close $fd}
+			if {$compiler_channel eq $fd} {
+				set compiler_channel {}
+			}
+			# Guard against double-fire after __abort_compilation
+			if {$::X::compilation_in_progress} {
+				catch {uplevel #0 $final_cmd}
+			}
+			return
+		}
+		set line [gets $fd]
+		# Prepend a space so compilation_message's "string replace ... 0 0"
+		# strips the leading space rather than the first real character.
+		if {$line ne {}} {
+			::X::compilation_message " $line"
+		}
+	}
+
 	## Start SDCC (ANSI C compiler)
 	 # @parm String work_dir	- Current working directory
 	 # @parm String input_file	- C source file to compile
@@ -273,27 +314,41 @@ namespace eval ExternalCompiler {
 			::X::messages_text_append [::Compiler::msgc {E}][mc "\nError: Unable to change working directory to '%s'" $work_dir]
 		}
 		if {!$::MICROSOFT_WINDOWS} {	;# Normal way (POSIX)
-			# Start GNU make
-			if {$makeutil_config(c_ena) && ${::PROGRAM_AVAILABLE(make)}} {
-				return [exec -- /bin/sh -c "make -f \"${makeutil_config(c_file)}\" ${makeutil_config(co_file)} ${makeutil_config(ct_file)}" |&	\
-						tclsh "${::LIB_DIRNAME}/external_command.tcl"		\
-						[tk appname]						\
-						{::ExternalCompiler::ext_compilation_complete 1}	\
-						::X::compilation_message &				\
-				]
+			# macOS: Tk's 'send' command is X11-only and fails silently on
+			# Aqua, so bypass external_command.tcl and read the pipeline
+			# directly via fileevent in the main event loop.
+			if {[tk windowingsystem] eq {aqua}} {
+				if {$makeutil_config(c_ena) && ${::PROGRAM_AVAILABLE(make)}} {
+					set _cmd "make -f \"${makeutil_config(c_file)}\" ${makeutil_config(co_file)} ${makeutil_config(ct_file)}"
+				} else {
+					set _cmd "$sdcc_cmd -mmcs51 --iram-size $iram --xram-size $xram --code-size $code $sdcc_opts \"$input_file\""
+				}
+				return [_macos_open_compiler $_cmd {::ExternalCompiler::ext_compilation_complete 1}]
 
-			# Start SDCC
+			# Normal Linux/POSIX path via external_command.tcl + send
 			} else {
-				return [exec -- /bin/sh -c "$sdcc_cmd -mmcs51	\
-					--iram-size $iram			\
-					--xram-size $xram			\
-					--code-size $code 			\
-					$sdcc_opts \"$input_file\"" |&		\
-						tclsh "${::LIB_DIRNAME}/external_command.tcl"	\
-						[tk appname]					\
-						{::ExternalCompiler::ext_compilation_complete 1}\
-						::X::compilation_message &			\
-				]
+				# Start GNU make
+				if {$makeutil_config(c_ena) && ${::PROGRAM_AVAILABLE(make)}} {
+					return [exec -- /bin/sh -c "make -f \"${makeutil_config(c_file)}\" ${makeutil_config(co_file)} ${makeutil_config(ct_file)}" |&	\
+							tclsh "${::LIB_DIRNAME}/external_command.tcl"		\
+							[tk appname]						\
+							{::ExternalCompiler::ext_compilation_complete 1}	\
+							::X::compilation_message &				\
+					]
+
+				# Start SDCC
+				} else {
+					return [exec -- /bin/sh -c "$sdcc_cmd -mmcs51	\
+						--iram-size $iram			\
+						--xram-size $xram			\
+						--code-size $code 			\
+						$sdcc_opts \"$input_file\"" |&		\
+							tclsh "${::LIB_DIRNAME}/external_command.tcl"	\
+							[tk appname]					\
+							{::ExternalCompiler::ext_compilation_complete 1}\
+							::X::compilation_message &			\
+					]
+				}
 			}
 		} else { ;# Microsoft Windows way
 			eval [subst -nocommands {
@@ -341,6 +396,10 @@ namespace eval ExternalCompiler {
 		}
 		backup_and_remove {adf hex lst}
 
+		if {[tk windowingsystem] eq {aqua}} {
+			return [_macos_open_compiler "as31 $as31_options \"$input_file\"" \
+				::ExternalCompiler::ext_compilation_complete]
+		}
 		return [exec -- /bin/sh -c "as31 $as31_options \"$input_file\"" |&	\
 			tclsh "${::LIB_DIRNAME}/external_command.tcl" "[tk appname]"	\
 			::ExternalCompiler::ext_compilation_complete ::X::compilation_message &	\
@@ -388,6 +447,10 @@ namespace eval ExternalCompiler {
 		backup_and_remove {adf hex lst omf}
 
 		if {!$::MICROSOFT_WINDOWS} {	;# Normal way (POSIX)
+			if {[tk windowingsystem] eq {aqua}} {
+				return [_macos_open_compiler "asem $asem51_options \"$input_file\"" \
+					::ExternalCompiler::ext_compilation_complete]
+			}
 			return [exec -- /bin/sh -c "asem $asem51_options \"$input_file\"" |&	\
 				tclsh "${::LIB_DIRNAME}/external_command.tcl" "[tk appname]"	\
 				::ExternalCompiler::ext_compilation_complete ::X::compilation_message &	\
@@ -437,6 +500,10 @@ namespace eval ExternalCompiler {
 			cd $work_dir
 		}]} then {
 			::X::messages_text_append [::Compiler::msgc {E}][mc "\nError: Unable to change working directory to '%s'" $work_dir]
+		}
+		if {[tk windowingsystem] eq {aqua}} {
+			return [_macos_open_compiler "asl $asl_opts \"$input_file\" $additional_commands" \
+				::ExternalCompiler::ext_compilation_complete]
 		}
 		return [exec -- /bin/sh -c "asl $asl_opts \"$input_file\" $additional_commands" |&	\
 			tclsh "${::LIB_DIRNAME}/external_command.tcl" "[tk appname]"	\

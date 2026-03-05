@@ -1070,7 +1070,7 @@ class GraphWidget {
 		if {$frac0 == 0 && $frac1 == 1} {
 			if {[winfo ismapped $horizontal_scrollbar]} {
 				pack forget $horizontal_scrollbar
-				update
+				update idletasks
 			}
 		# Show scrollbar
 		} else {
@@ -1078,7 +1078,7 @@ class GraphWidget {
 				pack $horizontal_scrollbar -fill x -side top -before $scrollable_frame
 			}
 			$horizontal_scrollbar set $frac0 $frac1
-			update
+			update idletasks
 		}
 	}
 

@@ -171,7 +171,7 @@ public method master_reset {mode} {
 			for {set i 0} {$i < $eram_size} {incr i} {
 				set eram($i) 0
 			}
-			update
+			update idletasks
 			for {set i 0} {$i < $xram_size} {incr i} {
 				set xram($i) 0
 			}
@@ -183,7 +183,7 @@ public method master_reset {mode} {
 			for {set i 0} {$i < $eram_size} {incr i} {
 				set eram($i) 255
 			}
-			update
+			update idletasks
 			for {set i 0} {$i < $xram_size} {incr i} {
 				set xram($i) 255
 			}
@@ -195,7 +195,7 @@ public method master_reset {mode} {
 			for {set i 0} {$i < $eram_size} {incr i} {
 				set eram($i) [expr {int(rand() * 256)}]
 			}
-			update
+			update idletasks
 			for {set i 0} {$i < $xram_size} {incr i} {
 				set xram($i) [expr {int(rand() * 256)}]
 			}
@@ -461,7 +461,7 @@ public method step {} {
 		# Synchronize
 		$this Simulator_GUI_sync S 208
 		# Return line number
-		update
+		update idletasks
 		return $Line($pc)
 
 	# Invalid OP code
@@ -621,7 +621,16 @@ public method sim_run {} {
 				if {([clock milliseconds] - $time_ms) > $GUI_UPDATE_INT} {
 					set idx 0
 					$this Simulator_sync_PC_etc
-					update
+					update idletasks
+					# Use vwait instead of bare 'update' to deliver Stop-button
+					# click events without blocking on AppKit compositor passes.
+					# Each vwait yields for at most ~1ms (the after 1 timer),
+					# letting the CALayer tree initialize incrementally across
+					# loop iterations rather than in one 6+ second block.
+					set ::_sim_yield 0
+					after 1 [list set ::_sim_yield 1]
+					vwait ::_sim_yield
+					unset -nocomplain ::_sim_yield
 					set time_ms [clock milliseconds]
 				}
 			} else {

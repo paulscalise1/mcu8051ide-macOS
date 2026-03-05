@@ -218,7 +218,7 @@ class MainTab {
 			-raisecmd [list X::switch_project $this]	\
 		]
 		after idle {
-			update
+			update idletasks
 			foreach project ${::X::openedProjects} {
 				$project bottomNB_redraw_pane
 			}

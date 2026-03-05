@@ -283,6 +283,7 @@ namespace eval editor {
 		wm resizable $win 0 1
 		wm minsize $win 350 470
 		raise $win
+		update idletasks
 		catch {grab $win}
 		wm protocol $win WM_DELETE_WINDOW {
 			::configDialogues::editor::CANCEL
@@ -723,7 +724,7 @@ namespace eval editor {
 								$top_left_frame.list_box selection set \$i
 							}
 							incr i
-							update
+							update idletasks
 						}
 						destroy $bottom_frame.progress
 					}

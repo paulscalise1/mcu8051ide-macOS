@@ -366,7 +366,7 @@ class Graph {
 
 		# Show the window
 		wm geometry $win "=260x135+$win_x+$win_y"
-		update
+		update idletasks
 		catch {
 			grab -global $win
 		}
@@ -596,14 +596,20 @@ class Graph {
 			wm title $dialog [mc "Performance warning"]
 			wm resizable $dialog 0 0
 			wm transient $dialog .
-			catch {grab $dialog}
 			wm protocol $dialog WM_DELETE_WINDOW "
 				grab release $dialog
 				destroy $dialog
 			"
 			raise $dialog
-			update
-			focus -force $bottom_frame.button_ok
+			# macOS: use 'update idletasks' (not bare 'update') to realize the
+			# window without processing mouse/keyboard events.  Bare 'update'
+			# re-processes the queued click that opened this dialog, causing
+			# graph_change_status_on to re-enter and destroy the dialog mid-setup.
+			# Set the grab AFTER the window is realized so it succeeds on Aqua
+			# (grab requires the window to be mapped).
+			update idletasks
+			catch {grab $dialog}
+			catch {focus -force $bottom_frame.button_ok}
 			tkwait window $dialog
 		}
 	}

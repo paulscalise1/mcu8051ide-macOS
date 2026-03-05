@@ -167,7 +167,7 @@ namespace eval ErrorHandler {
 		wm minsize $win 450 250
 		wm geometry $win =550x250+$x+$y
 		wm protocol $win WM_DELETE_WINDOW "::ErrorHandler::close_dialog $count"
-		update
+		update idletasks
 		raise $win
 		catch {grab $win}
 	}

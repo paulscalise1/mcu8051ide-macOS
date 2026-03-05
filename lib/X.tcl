@@ -1107,7 +1107,7 @@ namespace eval X {
 			X::find_CANCEL
 		}
 		wm transient $win .
-		update
+		update idletasks
 		raise $win
 		catch {grab $win}
 		focus $findFrame.entry
@@ -1492,7 +1492,7 @@ namespace eval X {
 			X::replace_CANCEL
 		}
 		wm transient $win .
-		update
+		update idletasks
 		raise $win
 		catch {grab $win}
 		focus $findFrame.entry
@@ -1805,6 +1805,7 @@ namespace eval X {
 			X::goto_CANCEL
 		}
 		wm transient $win .
+		update idletasks
 		catch {grab $win}
 		raise $win
 		tkwait window $win
@@ -2130,6 +2131,7 @@ namespace eval X {
 			X::project_new_CANCEL
 		}
 		wm transient $win .
+		update idletasks
 		catch {grab $win}
 		raise $win
 		tkwait window $win
@@ -3175,7 +3177,7 @@ namespace eval X {
 			return
 		}
 
-		update
+		update idletasks
 		catch {grab $win}
 		raise $win
 		tkwait window $win
@@ -3529,7 +3531,7 @@ namespace eval X {
 
 		set critical_procedure_in_progress 0
 
-		update
+		update idletasks
 		foreach project $openedProjects {
 			$project bottomNB_redraw_pane
 		}
@@ -3990,6 +3992,15 @@ namespace eval X {
 		set compilation_in_progress	0
 		set compiler_pid		0
 		set doxygen_pid			0
+
+		# macOS: close the fileevent-based pipeline channel if one is open
+		if {[tk windowingsystem] eq {aqua}} {
+			if {$::ExternalCompiler::compiler_channel ne {}} {
+				catch {fileevent $::ExternalCompiler::compiler_channel readable {}}
+				catch {close $::ExternalCompiler::compiler_channel}
+				set ::ExternalCompiler::compiler_channel {}
+			}
+		}
 	}
 
 	## Create progressbar on status bar (showing compilation progress)
@@ -4265,7 +4276,7 @@ namespace eval X {
 		wm transient $win .
 		catch {grab $win}
 		raise $win
-		update
+		update idletasks
 
 		# Highlight all lines in the editor
 		$actualProject editor_procedure {} highlight_all {}
@@ -4277,7 +4288,7 @@ namespace eval X {
 		$main_frame.header configure -text [mc "Converting ..."]
 		$main_frame.progress_bar configure -maximum $max
 		set compilation_progress 1
-		update
+		update idletasks
 
 		# Export and write data
 		if {$targetType == "-html"} {
@@ -4440,7 +4451,7 @@ namespace eval X {
 		foreach project $openedProjects {
 			$project pale_withdraw_all_windows
 		}
-		update
+		update idletasks
 
 		# Save all projects
 		foreach project $openedProjects {
@@ -4581,7 +4592,7 @@ namespace eval X {
 		puts $file "# Please do not modify this file manually.\n"
 
 		puts $file "# booleans"
-		if {$::MICROSOFT_WINDOWS} {
+		if {$::MICROSOFT_WINDOWS || ${::tcl_platform(os)} eq {Darwin}} {
 			if {[wm state .] == {zoomed}} {
 				puts $file "WINDOW_ZOOMED = 1"
 			} else {
@@ -5044,9 +5055,10 @@ namespace eval X {
 		wm title $dialog [mc "Exit program - MCU 8051 IDE"]
 		wm state $dialog normal
 		wm minsize $dialog 350 200
-		grab $dialog
-		focus -force $dialog.f.b_save_all
 		wm transient $dialog .
+		update idletasks
+		catch {grab $dialog}
+		catch {focus -force $dialog.f.b_save_all}
 		if {!$force} {
 			wm protocol $dialog WM_DELETE_WINDOW "
 				grab release $dialog
@@ -5379,7 +5391,7 @@ namespace eval X {
 			$actualProject subprograms_setEnabled 0		;# Disable list of subprograms
 			$actualProject cvarsview_setEnabled 0		;# Disable C vars view
 			$actualProject stack_monitor_set_enabled 0	;# Disable stack monitor
-			update
+			update idletasks
 			Lock_simulator_menu				;# Lock simulator menu and toolbar
 			$actualProject interrupt_monitor_disable_buttons;# Disable interrupt monitor
 
@@ -5565,7 +5577,7 @@ namespace eval X {
 			}
 
 			$actualProject freeze	;# Switch filelist to "Simulator mode"
-			update
+			update idletasks
 
 			# Raise tab "Simulator" on the bottom panel
 			if {[lsearch {Graph Simulator CVarsView} $bottom_page_ID] == -1} {
@@ -5643,7 +5655,7 @@ namespace eval X {
 			# Set simulator cursor in editor to the first OP code
 			$actualProject move_simulator_line [$actualProject simulator_getCurrentLine]
 			refresh_code_mem_window $actualProject			;# Synchronize CODE memory hex editor
-			update
+			update idletasks
 			Unlock_simulator_menu				;# Unlock simulator menu and toolbar
 			stepback_button_set_ena 0			;# Disable StepBack controls
 
@@ -5835,7 +5847,8 @@ namespace eval X {
 				wm minsize $dialog 500 250
 				wm protocol $dialog WM_DELETE_WINDOW [mc "grab release %s; destroy %s" $dialog $dialog]
 				wm transient $dialog .
-				grab $dialog
+				update idletasks
+				catch {grab $dialog}
 				raise $dialog
 				tkwait window $dialog
 			}
@@ -6010,7 +6023,7 @@ namespace eval X {
 		variable compilation_progress	;# Variable for compilation progressbar
 
 		incr compilation_progress
-		update
+		update idletasks
 	}
 
 	## Set maximum for progressbar in file conversion dialog
@@ -6254,7 +6267,8 @@ namespace eval X {
 			wm minsize $dialog 520 250
 			wm protocol $dialog WM_DELETE_WINDOW "grab release $dialog; destroy $dialog"
 			wm transient $dialog .hex2bin2hex_dialog
-			grab $dialog
+			update idletasks
+			catch {grab $dialog}
 			raise $dialog
 			tkwait window $dialog
 		}
@@ -7177,7 +7191,8 @@ namespace eval X {
 			X::cleanup_CANCEL
 		}
 		wm transient .cleanup .
-		grab .cleanup
+		update idletasks
+		catch {grab .cleanup}
 		raise .cleanup
 		tkwait window .cleanup
 	}
@@ -7381,7 +7396,12 @@ namespace eval X {
 								continue
 							}
 							catch {
-								exec -- /bin/sh -c "kill -s 9 \$(ps -o pid --no-headers --ppid $pid)"
+								# macOS BSD ps uses different flags; use pkill instead
+								if {${::tcl_platform(os)} eq {Darwin}} {
+									exec -- pkill -KILL -P $pid
+								} else {
+									exec -- /bin/sh -c "kill -s 9 \$(ps -o pid --no-headers --ppid $pid)"
+								}
 							}
 						}
 					}
@@ -7485,15 +7505,46 @@ namespace eval X {
 			custom_cmd_icon_reset $custom_command_NUM($cmd_num)
 		 # Run normally
 		} else {
-			set custom_command_PID($cmd_num) [exec -- tclsh 		\
-				${::LIB_DIRNAME}/custom_command.tcl [tk appname]	\
-				$custom_command_NUM($cmd_num) << $cmd &			\
-			]
+			if {[tk windowingsystem] eq {aqua}} {
+				# macOS: custom_command.tcl uses 'send' (X11-only).
+				# Write the command to a temp script and run bash on it async.
+				set _tmpf "/tmp/mcu8051_custom_[pid]_[clock milliseconds].sh"
+				set _tfd [open $_tmpf w]
+				puts $_tfd $cmd
+				close $_tfd
+				set _num $custom_command_NUM($cmd_num)
+				set _fd [open "|bash [list $_tmpf] 2>&1" r]
+				fconfigure $_fd -blocking 0 -buffering line
+				set ::_macos_custom_buf($_fd) {}
+				set ::_macos_custom_tmp($_fd) $_tmpf
+				fileevent $_fd readable [list ::X::_macos_custom_readable $_fd $_num]
+				set custom_command_PID($cmd_num) [pid $_fd]
+			} else {
+				set custom_command_PID($cmd_num) [exec -- tclsh 		\
+					${::LIB_DIRNAME}/custom_command.tcl [tk appname]	\
+					$custom_command_NUM($cmd_num) << $cmd &			\
+				]
+			}
 		}
 		incr custom_command_counter
 
 		# Finalize
 		set critical_procedure_in_progress 0
+	}
+
+	## macOS: fileevent handler for async custom command execution.
+	proc _macos_custom_readable {fd num} {
+		if {[eof $fd]} {
+			fileevent $fd readable {}
+			catch {close $fd}
+			set result $::_macos_custom_buf($fd)
+			unset -nocomplain ::_macos_custom_buf($fd)
+			catch {file delete $::_macos_custom_tmp($fd)}
+			unset -nocomplain ::_macos_custom_tmp($fd)
+			::X::custom_cmd_finish $num $result
+			return
+		}
+		append ::_macos_custom_buf($fd) [gets $fd] "\n"
 	}
 
 	## Invoke dialog "Custom command finished"
@@ -7566,7 +7617,7 @@ namespace eval X {
 		wm title $win [mc "Custom command %s - MCU 8051 IDE" $cmd_num]
 		wm minsize $win 550 300
 		wm protocol $win WM_DELETE_WINDOW {}
-		update
+		update idletasks
 
 		# Run terminal emulator
 		if {[catch {
@@ -7600,7 +7651,12 @@ namespace eval X {
 		# Get list of child processes of the terminal
 		set children [list]
 		catch {
-			set children [exec -- /bin/sh -c "ps -o pid --no-headers --ppid $pid"]
+			# macOS BSD ps uses different flags; use pgrep instead
+			if {${::tcl_platform(os)} eq {Darwin}} {
+				set children [exec -- pgrep -P $pid]
+			} else {
+				set children [exec -- /bin/sh -c "ps -o pid --no-headers --ppid $pid"]
+			}
 		}
 
 		# Ask user, if he/she wishes to kill the children, if there are any
@@ -7901,6 +7957,7 @@ namespace eval X {
 		wm minsize $win 580 400
 		wm protocol $win WM_DELETE_WINDOW "grab release $win; destroy $win"
 		wm transient $win .
+		update idletasks
 		catch {grab $win}
 		raise $win
 	}
@@ -8056,6 +8113,7 @@ namespace eval X {
 			::X::change_letter_case_CANCEL
 		}
 		wm transient $win .
+		update idletasks
 		catch {grab $win}
 		raise $win
 		tkwait window $win
@@ -8155,7 +8213,7 @@ namespace eval X {
 		wm transient $win .
 		catch {grab $win}
 		raise $win
-		update
+		update idletasks
 
 		# Finish highlight
 		$actualProject editor_procedure {} highlight_all {}
@@ -8169,7 +8227,7 @@ namespace eval X {
 		$main_frame.progress_bar configure -maximum $max
 
 		set compilation_progress 1	;# Reset compilation progress variable
-		update
+		update idletasks
 
 		# Finaly perform letter case change
 		$actualProject editor_procedure {} change_letter_case [list $options]
@@ -8482,7 +8540,7 @@ namespace eval X {
 			place $PROJECTDETAILSWIN -anchor nw				\
 				-x [expr {[winfo pointerx .] - [winfo rootx .] + 20}]	\
 				-y [expr {[winfo pointery .] - [winfo rooty .] + 20}]
-			update
+			update idletasks
 			raise $PROJECTDETAILSWIN
 		}
 	}
@@ -9490,6 +9548,7 @@ namespace eval X {
 		wm protocol $win WM_DELETE_WINDOW {
 			X::line2pc_CANCEL
 		}
+		update idletasks
 		catch {grab $win}
 		raise $win
 		tkwait window $win
@@ -10019,6 +10078,39 @@ namespace eval X {
 		$actualProject editor_procedure {} document_current_func {}
 	}
 
+	## macOS: Run a shell command asynchronously, relaying output to callbacks.
+	 # Replaces the "exec ... |& tclsh external_command.tcl" pattern which uses
+	 # Tk's 'send' IPC — X11-only, silently fails on macOS Aqua.
+	 #
+	 # @parm String shell_cmd - Shell command (run via /bin/sh -c, stderr merged)
+	 # @parm String final_cmd - Tcl command called once when process finishes
+	 # @parm String line_cmd  - Tcl command called per output line (empty = skip)
+	 # @return List - PID(s) of the spawned process(es)
+	proc macos_async_exec {shell_cmd final_cmd {line_cmd {}}} {
+		set fd [open "|/bin/sh -c [list $shell_cmd] 2>@1" r]
+		fconfigure $fd -blocking 0 -buffering line
+		fileevent $fd readable [list ::X::_macos_async_readable $fd $final_cmd $line_cmd]
+		return [pid $fd]
+	}
+
+	## fileevent readable handler for macos_async_exec channels.
+	proc _macos_async_readable {fd final_cmd line_cmd} {
+		if {[eof $fd]} {
+			fileevent $fd readable {}
+			catch {close $fd}
+			if {$final_cmd ne {}} {
+				catch {uplevel #0 $final_cmd}
+			}
+			return
+		}
+		set line [gets $fd]
+		# Prepend a space so send-compatible message procs' "string replace ... 0 0"
+		# strips the leading space rather than the first real character.
+		if {$line_cmd ne {} && $line ne {}} {
+			catch {uplevel #0 [concat $line_cmd [list " $line"]]}
+		}
+	}
+
 	## Create doxygen configuration file if it does not already exist
 	 # @return void
 	proc create_doxyfile {} {
@@ -10056,7 +10148,19 @@ namespace eval X {
 			return
 		}
 		if {!$::MICROSOFT_WINDOWS} {
-			if {![file exists Doxyfile]} {
+			if {[tk windowingsystem] eq {aqua}} {
+				if {![file exists Doxyfile]} {
+					$actualProject messages_text_append "doxygen -g Doxyfile\n"
+					set doxygen_pid [macos_async_exec \
+						{doxygen -g Doxyfile && doxygen -u Doxyfile} \
+						::X::doxygen_finish ::X::doxygen_message]
+				} else {
+					$actualProject messages_text_append "doxygen -u Doxyfile\n"
+					set doxygen_pid [macos_async_exec \
+						{doxygen -u Doxyfile} \
+						::X::doxygen_finish ::X::doxygen_message]
+				}
+			} elseif {![file exists Doxyfile]} {
 				$actualProject messages_text_append "doxygen -g Doxyfile\n"
 				set doxygen_pid [exec --						\
 					doxygen -g Doxyfile && doxygen -u Doxyfile |&			\
@@ -10121,11 +10225,16 @@ namespace eval X {
 			}
 
 			$actualProject messages_text_append "\ndoxygen Doxyfile\n"
-			set doxygen_pid [exec --					\
-				doxygen Doxyfile |& tclsh				\
-				${::LIB_DIRNAME}/external_command.tcl [tk appname]	\
-				::X::doxygen_finish ::X::doxygen_message &		\
-			]
+			if {[tk windowingsystem] eq {aqua}} {
+				set doxygen_pid [macos_async_exec {doxygen Doxyfile} \
+					::X::doxygen_finish ::X::doxygen_message]
+			} else {
+				set doxygen_pid [exec --					\
+					doxygen Doxyfile |& tclsh				\
+					${::LIB_DIRNAME}/external_command.tcl [tk appname]	\
+					::X::doxygen_finish ::X::doxygen_message &		\
+				]
+			}
 		}
 
 		destroy_progressBar_on_Sbar
@@ -10219,10 +10328,16 @@ namespace eval X {
 
 		$actualProject bottomNB_show_up {Messages}
 		$actualProject messages_text_append "\nrm -rfv html/* && rm -rfv latex/* && rm -rfv xml/*\n"
-		catch {exec -- /bin/sh <<						\
-			"rm -rfv html/* && rm -rfv latex/* && rm -rfv xml/*" |&		\
-			tclsh ${::LIB_DIRNAME}/external_command.tcl [tk appname]	\
-			::X::doxygen_message ::X::doxygen_message &			\
+		if {[tk windowingsystem] eq {aqua}} {
+			catch {macos_async_exec \
+				{rm -rfv html/* && rm -rfv latex/* && rm -rfv xml/*} \
+				::X::doxygen_message ::X::doxygen_message}
+		} else {
+			catch {exec -- /bin/sh <<						\
+				"rm -rfv html/* && rm -rfv latex/* && rm -rfv xml/*" |&		\
+				tclsh ${::LIB_DIRNAME}/external_command.tcl [tk appname]	\
+				::X::doxygen_message ::X::doxygen_message &			\
+			}
 		}
 	}
 
@@ -10440,7 +10555,7 @@ namespace eval X {
 		wm minsize $win 250 400
 		wm transient $win .
 		wm protocol $win WM_DELETE_WINDOW "X::statistics_close $statistics_counter"
-		update
+		update idletasks
 		focus $button_frame.ok
 		raise $win
 	}
@@ -10709,7 +10824,7 @@ namespace eval X {
 			# Open the specified file
 			if {[$actualProject openfile $filename 1 . def def 0 0 {}] != {}} {
 				$actualProject switch_to_last
-				update
+				update idletasks
 				$actualProject editor_procedure {} parseAll {}
 
 				# Make LST read only
@@ -10999,7 +11114,7 @@ namespace eval X {
 			X::vhw_HD44780_CANCEL
 		}
 		wm transient $dialog .
-		update
+		update idletasks
 		raise $dialog
 		catch {grab $dialog}
 
@@ -11352,8 +11467,14 @@ namespace eval X {
 	 # @parm String uri -- URI to open
 	 # @return void
 	proc open_uri {uri} {
-		# On Linux and similars systems we use "xdg-open"
-		if {!$::MICROSOFT_WINDOWS} {
+		# On macOS use "open"
+		if {${::tcl_platform(os)} eq {Darwin}} {
+			catch {
+				exec -- open $uri &
+			}
+
+		# On Linux and similar systems we use "xdg-open"
+		} elseif {!$::MICROSOFT_WINDOWS} {
 			catch {
 				exec -- xdg-open $uri &
 			}
@@ -11391,7 +11512,7 @@ namespace eval X {
 	## Open web page with SDCC manual in user preferred browser
 	 # @return void
 	proc __sdcc_manual {} {
-		open_uri {http://sdcc.sourceforge.net/doc/sdccman.html}
+		open_uri {https://sdcc.sourceforge.net/doc/sdccman.pdf}
 	}
 
 	## Open web page with ASEM-51 manual in user preferred browser
@@ -11513,6 +11634,7 @@ namespace eval X {
 			X::d52_CANCEL
 		}
 		wm transient $win .
+		update idletasks
 		catch {grab $win}
 		raise $win
 		tkwait window $win

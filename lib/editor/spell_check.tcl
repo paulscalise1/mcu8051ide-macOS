@@ -528,6 +528,14 @@ proc start_spellchecker_process {} {
 	if {$::MICROSOFT_WINDOWS} {
 		return
 	}
+	# macOS: the spell checker pipeline uses receive_and_print.tcl and
+	# external_command.tcl, both of which rely on Tk's 'send' for IPC.
+	# 'send' is X11-only and fails silently on Aqua.  Disable until rewritten.
+	if {[tk windowingsystem] eq {aqua}} {
+		set ::Editor::spellchecker_start_failed 1
+		set ::Editor::spellchecker_started_flag 1
+		return
+	}
 
 	# Start watch dog timer
 	set ::Editor::spellchecker_start_timer [after 10000 {

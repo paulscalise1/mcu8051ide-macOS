@@ -107,7 +107,7 @@ class TableOfInstructions {
 		wm title $win "[mc {8051 Instruction Table}] - MCU 8051 IDE"
 		wm resizable $win 0 1
 		wm protocol $win WM_DELETE_WINDOW "$this close_window"
-		update
+		update idletasks
 
 		# Compute required width of the window
 		set w [winfo width $matrix_frame.hh_lbl1]

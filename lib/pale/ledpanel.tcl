@@ -142,7 +142,8 @@ class LedPanel {
 	## Value of configuration menu variable "keep_win_on_top" has been changed
 	 # @return void
 	public method keep_win_on_top_changed {} {
-		set keep_win_on_top $LedPanel::menu_keep_win_on_top
+		set keep_win_on_top [expr {!$keep_win_on_top}]
+		set ::${class_name}::menu_keep_win_on_top $keep_win_on_top
 		if {$keep_win_on_top} {
 			wm attributes $win -topmost 1 -alpha 0.8
 		} else {
@@ -202,14 +203,17 @@ class LedPanel {
 		$canvas_widget create text 5 $cb_p_y	\
 			-text [mc "PORT"]		\
 			-font $cb_font			\
+			-fill #000000			\
 			-anchor w
 		$canvas_widget create text 5 $cb_b_y	\
 			-text [mc "BIT"]		\
 			-font $cb_font			\
+			-fill #000000			\
 			-anchor w
 		$canvas_widget create text 30 $usr_n_y	\
 			-text [mc "Note"]		\
 			-font $cb_font			\
+			-fill #000000			\
 			-anchor e
 		$canvas_widget create window 35 $usr_n_y	\
 			-window [ttk::entry $canvas_widget.usr_note	\
@@ -504,7 +508,7 @@ class LedPanel {
 			# Accept new state of ports
 			set state [$project pale_get_true_state]
 			new_state state
-			update
+			update idletasks
 
 		# Fail
 		}]} then {

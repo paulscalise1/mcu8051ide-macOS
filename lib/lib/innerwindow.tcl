@@ -231,7 +231,7 @@ class InnerWindow {
 			if {[string length $y]} {
 				place $win -y $y
 			}
-			update
+			update idletasks
 		}
 
 		# Get geometry
@@ -246,7 +246,7 @@ class InnerWindow {
 	## Event handler: window frame <FocusIn>
 	 # @return void
 	public method focusin {} {
-		update
+		update idletasks
 		foreach widget [list $title_bar $title_label $win] {
 			$widget configure -bg $active_titclr
 		}
@@ -254,7 +254,7 @@ class InnerWindow {
 			$widget configure -style InnerWindow_Active.TButton
 		}
 
-		update
+		update idletasks
 	}
 
 	## Event handler: window frame <FocusOut>
@@ -264,14 +264,14 @@ class InnerWindow {
 			return
 		}
 
-		update
+		update idletasks
 		foreach widget [list $title_bar $title_label $win] {
 			$widget configure -bg $inactive_titclr
 		}
 		foreach widget [list $close_button $coll_exp_but] {
 			$widget configure -style InnerWindow_Inactive.TButton
 		}
-		update
+		update idletasks
 	}
 
 	## (Un)Shade window

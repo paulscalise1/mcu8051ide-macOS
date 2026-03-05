@@ -219,6 +219,7 @@ namespace eval custom_commands {
 		wm title $win [mc "Edit custom commands - %s" ${::APPNAME}]
 		wm minsize $win 460 400
 		raise $win
+		update idletasks
 		catch {grab $win}
 		wm protocol $win WM_DELETE_WINDOW {
 			::configDialogues::custom_commands::CANCEL
@@ -334,7 +335,7 @@ namespace eval custom_commands {
 			grab .custom_commands_config_dialog"
 		wm transient $win .custom_commands_config_dialog
 		raise $win
-		update
+		update idletasks
 		catch {
 			grab -global $win
 		}

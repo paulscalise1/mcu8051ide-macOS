@@ -1338,7 +1338,7 @@ class HexEditor {
 
 		# Adjust cursor
 		left_view_move_insert $x $y
-		update
+		update idletasks
 	}
 
 	## Left view event handler: <Button-1>
@@ -2387,7 +2387,7 @@ class HexEditor {
 			$right_header configure -cursor watch
 			$right_view configure -cursor watch
 		}
-		update
+		update idletasks
 		$left_view configure -width $left_view_width
 		$left_header configure -width $left_view_width
 
@@ -2687,10 +2687,10 @@ class HexEditor {
 			grab release $find_dialog_win
 			destroy $find_dialog_win
 		"
-		update
-		grab $find_dialog_win
+		update idletasks
+		catch {grab $find_dialog_win}
 		$top_frame.string_entry selection range 0 end
-		focus -force $top_frame.string_entry
+		catch {focus -force $top_frame.string_entry}
 
 		tkwait window $find_dialog_win
 		if {$last_find_index == {}} {

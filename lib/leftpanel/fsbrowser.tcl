@@ -488,7 +488,7 @@ class FSBrowser {
 			# Perform opening procedure
 			if {[$this openfile $file 1 . def def 0 0 {}] != {}} {
 				$this switch_to_last
-				update
+				update idletasks
 				$this editor_procedure {} parseAll {}
 
 				# Make LST read only
@@ -506,7 +506,7 @@ class FSBrowser {
 				[file join $fs_browser_current_dir [lindex $file 1]]
 		}
 		set fs_browser_selection_in_P 0
-		update
+		update idletasks
 	}
 
 	## Invoke dialog to edit FS browser bookmarks
@@ -771,9 +771,10 @@ class FSBrowser {
 			destroy $dialog
 		"
 		wm transient $dialog .
-		grab $dialog
+		update idletasks
+		catch {grab $dialog}
 		raise $dialog
-		focus -force $dialog.entry
+		catch {focus -force $dialog.entry}
 		tkwait window $dialog
 	}
 
@@ -975,7 +976,8 @@ class FSBrowser {
 			grab release $dialog
 			destroy $dialog"
 		wm transient $dialog .
-		grab $dialog
+		update idletasks
+		catch {grab $dialog}
 		raise $dialog
 		tkwait window $dialog
 	}
@@ -1109,7 +1111,7 @@ class FSBrowser {
 		if {$frac0 == 0 && $frac1 == 1} {
 			if {[winfo ismapped $fs_browser_listbox_v_scrollbar]} {
 				pack forget $fs_browser_listbox_v_scrollbar
-				update
+				update idletasks
 			}
 
 		# Otherwise -> create scrollbar
@@ -1118,7 +1120,7 @@ class FSBrowser {
 				pack $fs_browser_listbox_v_scrollbar	\
 					-after $fs_browser_listbox	\
 					-fill y -expand 1
-				update
+				update idletasks
 			}
 			$fs_browser_listbox_v_scrollbar set $frac0 $frac1
 		}
@@ -1133,7 +1135,7 @@ class FSBrowser {
 		if {$frac0 == 0 && $frac1 == 1} {
 			if {[winfo ismapped $fs_browser_listbox_h_scrollbar]} {
 				pack forget $fs_browser_listbox_h_scrollbar
-				update
+				update idletasks
 			}
 
 		# Otherwise -> create scrollbar
@@ -1142,7 +1144,7 @@ class FSBrowser {
 				pack $fs_browser_listbox_h_scrollbar		\
 					-after $fs_browser_listbox_top_frame	\
 					-side bottom -fill x -expand 0
-				update
+				update idletasks
 			}
 			$fs_browser_listbox_h_scrollbar set $frac0 $frac1
 		}

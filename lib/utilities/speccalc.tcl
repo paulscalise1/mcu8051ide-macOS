@@ -87,7 +87,7 @@ class SpecCalc {
 	destructor {
 		# Hide dialog window
 		wm withdraw $win
-		update
+		update idletasks
 
 		# Create configuration list
 		set config [list						\
@@ -208,7 +208,7 @@ class SpecCalc {
 		# Create all pages when system "calms down"
 		after idle "catch {
 			foreach page {$page_list} {
-				update
+				update idletasks
 				$this create_page \$page
 			}
 		}"

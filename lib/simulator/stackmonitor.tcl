@@ -440,7 +440,7 @@ class StackMonitor {
 		wm protocol $dlg WM_DELETE_WINDOW "
 			grab release $dlg
 			destroy $dlg"
-		update
+		update idletasks
 		raise $dlg
 		focus $dlg.ent
 	}

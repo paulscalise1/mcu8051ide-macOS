@@ -253,7 +253,7 @@ set T [lindex [time {
 }] 0]
 # Hide main window
 wm withdraw .
-update
+update idletasks
 
 # Determinate default Fixed font
 set ::DEFAULT_FIXED_FONT {Courier}
@@ -295,8 +295,8 @@ proc mcu8051ide_bind args {
 		return [original_command_bind $widget $event_str]
 	}
 
-	# MS Windows doesn't recognize ISO and XFree86 codes
-	if {$::MICROSOFT_WINDOWS} {
+	# MS Windows and macOS don't recognize ISO and XFree86 (X11-only) codes
+	if {$::MICROSOFT_WINDOWS || ${::tcl_platform(os)} eq {Darwin}} {
 		if {
 			[string first {ISO} $event_str] != -1	||
 			[string first {XF86} $event_str] != -1
@@ -320,6 +320,15 @@ proc mcu8051ide_bind args {
 
 		original_command_bind $widget "<${event_str}[string toupper $letter]>" $command
 		original_command_bind $widget "<${event_str}[string tolower $letter]>" $command
+
+		# On macOS mirror every Control binding as a Command binding so that
+		# standard Mac shortcuts (Cmd+S, Cmd+O, Cmd+F, etc.) work throughout
+		# the app without requiring the user to reconfigure anything.
+		if {${::tcl_platform(os)} eq {Darwin} && [string first {Control} $event_str] != -1} {
+			set cmd_event_str [string map {Control Command} $event_str]
+			original_command_bind $widget "<${cmd_event_str}[string toupper $letter]>" $command
+			original_command_bind $widget "<${cmd_event_str}[string tolower $letter]>" $command
+		}
 	} else {
 		original_command_bind $widget $event_str $command
 	}
@@ -432,6 +441,10 @@ if {[catch {
 	if {[lsearch -ascii -exact [ttk::style theme names] ${::GLOBAL_CONFIG(wstyle)}] == -1} {
 		set ::GLOBAL_CONFIG(wstyle) {clam}
 	}
+	# On macOS the "aqua" theme is incompatible with the app's hardcoded colors.
+	if {${::tcl_platform(os)} eq {Darwin} && ${::GLOBAL_CONFIG(wstyle)} eq {aqua}} {
+		set ::GLOBAL_CONFIG(wstyle) {clam}
+	}
 	 # Check if the cpecified translation is valid
 	set tmp [list]
 	catch {	;# For Microsoft Windows it has to be enclosed by catch
@@ -490,14 +503,11 @@ if {!${::CLI_OPTION(notranslation)} && ${GLOBAL_CONFIG(language)} != {en}} {
 # -----------------------------
 if {!$::CLI_OPTION(nosplash) && ${::GLOBAL_CONFIG(splash)}} {
 
-	# Workaround for multiple monitors
-	toplevel .splash_aux
-	wm attributes .splash_aux -fullscreen 1
-	update
-	set sw [winfo width .splash_aux]
-	set sh [winfo height .splash_aux]
-	destroy .splash_aux
-	update
+	# Get screen dimensions for splash centering.
+	# (Previously used a fullscreen toplevel hack, but on macOS that triggers
+	# the animated fullscreen transition and leaves a transient black window.)
+	set sw [winfo screenwidth .]
+	set sh [winfo screenheight .]
 
 	# Crete toplevel  window
 	toplevel .splash -class {Splash creen} -bg ${::COMMON_BG_COLOR}
@@ -526,7 +536,7 @@ if {!$::CLI_OPTION(nosplash) && ${::GLOBAL_CONFIG(splash)}} {
 	bind .splash <1> {wm withdraw .splash}
 
 	# Done ..
-	update
+	update idletasks
 }
 
 
@@ -561,7 +571,7 @@ proc showInitMessage {message} {
 	if {!${::CLI_OPTION(nosplash)} && ${::GLOBAL_CONFIG(splash)}} {
 		if {[winfo exists .splash.status]} {
 			.splash.status configure -text [string trim $message]
-			update
+			update idletasks
 		}
 	}
 
@@ -827,11 +837,11 @@ catch {
 showInitMessage [mc "\tOpening last session"]
 flush stdout
 # Evaluate new geometry of the main window
-update
+update idletasks
 evaluate_new_window_geometry
 if {![winfo viewable .mainMenu]} {
 	wm geometry . $::CONFIG(WINDOW_GEOMETRY)
-	update
+	update idletasks
 }
 # Open projects of last session
 set T [time {
@@ -867,9 +877,31 @@ if {$::MICROSOFT_WINDOWS} {
 		set ::LATS_KNOWN_WM_STATE_IS_ZOOMED 0
 	}
 }
+# On macOS: after-ID used to debounce <Configure> events during live resize.
+# Tk on Aqua fires one <Configure> per pixel dragged; calling X::redraw_panes
+# on every event (each of which internally runs update/update idletasks and
+# places sashes, triggering more geometry events) creates a positive-feedback
+# cascade that stalls the event loop for seconds.  Coalescing to ~60fps fixes
+# this without affecting the user-visible resize behaviour.
+set ::_macos_redraw_after_id {}
+
 # Create binding for panes management
 bind . <Configure> {
-	X::redraw_panes
+	# macOS: coalesce rapid <Configure> events — call redraw at most ~60fps.
+	# IMPORTANT: bind . <Configure> fires for ALL widgets (every widget has "."
+	# in its bindtags), not just the root window.  With a project open, dozens
+	# of child widgets each emit <Configure> per pixel dragged, so even the
+	# cheap debounce path runs thousands of times/second and stalls the event
+	# loop.  Guard with "%W" eq "." so only the root window's own event
+	# triggers the debounce; child-widget resizes are irrelevant here.
+	if {[tk windowingsystem] eq {aqua}} {
+		if {"%W" eq "."} {
+			after cancel $::_macos_redraw_after_id
+			set ::_macos_redraw_after_id [after 16 X::redraw_panes]
+		}
+	} else {
+		X::redraw_panes
+	}
 
 	# Without this "help windows" won't work properly on MS Windows
 	if {$::MICROSOFT_WINDOWS} {
@@ -881,7 +913,7 @@ bind . <Configure> {
 
 		if {!${::LATS_KNOWN_WM_STATE_IS_ZOOMED} && $now_zoomed} {
 			after idle {
-				update
+				update idletasks
 				regsub {[\+\-].*$} [wm geometry .] {+0+0} geometry
 				wm geometry . $geometry
 			}
@@ -898,9 +930,9 @@ if {!$CLI_OPTION(quiet)} {
 set ::Compiler::in_IDE 1
 set APPLICATION_LOADED 1
 set X::critical_procedure_in_progress 0
-update
+update idletasks
 X::redraw_panes
-update
+update idletasks
 foreach project ${::X::openedProjects} {
 	$project bottomNB_redraw_pane
 	$project filelist_adjust_size_of_tabbar
@@ -908,16 +940,29 @@ foreach project ${::X::openedProjects} {
 }
 # Focus on the active editor
 if {${::X::actualProject} != {}} {
-	update
+	update idletasks
 	focus [${::X::actualProject} editor_procedure {} cget -editor]
-	focus [${::X::actualProject} editor_procedure {} Configure {}]
-	focus [${::X::actualProject} editor_procedure {} highlight_visible_area {}]
+	${::X::actualProject} editor_procedure {} Configure {}
+	${::X::actualProject} editor_procedure {} highlight_visible_area {}
 }
 
 # Correct strange behavior concerning restoration of the last window size and position
 if {$::MICROSOFT_WINDOWS} {
-	update
+	update idletasks
 	wm geometry . $::CONFIG(WINDOW_GEOMETRY)
+}
+
+# macOS: Release stale grabs after returning from another Mission Control space.
+# Without this, the app becomes unresponsive to clicks after a 3-finger swipe
+# because a grab from a previously closed popup may still be registered.
+if {[tk windowingsystem] eq {aqua}} {
+	bind . <FocusIn> {+
+		set _cg [grab current .]
+		if {$_cg ne {} && (![winfo exists $_cg] || ![winfo ismapped $_cg])} {
+			catch {grab release $_cg}
+		}
+		unset -nocomplain _cg
+	}
 }
 
 # Initialize file change notifications mechanism

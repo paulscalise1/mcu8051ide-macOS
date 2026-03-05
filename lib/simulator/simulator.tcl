@@ -776,6 +776,7 @@ class Simulator {
 		wm transient $win .
 		wm geometry $win "+[expr {([winfo screenwidth .] - 450) / 2}]+[expr {([winfo screenheight .] - 400) / 2}]"
 		raise $win
+		update idletasks
 		catch {
 			grab $win
 		}
@@ -1209,6 +1210,7 @@ class Simulator {
 		wm transient $win .
 		wm geometry $win "+[expr {([winfo screenwidth .] - 350) / 2}]+[expr {([winfo screenheight .] - 100) / 2}]"
 		raise $win
+		update idletasks
 		catch {
 			grab $win
 		}

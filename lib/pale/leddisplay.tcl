@@ -248,23 +248,28 @@ class LedDisplay {
 		$canvas_widget create text 40 5	\
 			-text [mc "PORT"]	\
 			-font $cb_font		\
+			-fill #000000			\
 			-anchor ne
 		$canvas_widget create text 42 5	\
 			-text [mc "BIT"]	\
 			-font $cb_font		\
+			-fill #000000			\
 			-anchor nw
 		$canvas_widget create text 200 5\
 			-text [mc "PORT"]	\
 			-font $cb_font		\
+			-fill #000000			\
 			-anchor ne
 		$canvas_widget create text 202 5\
 			-text [mc "BIT"]	\
 			-font $cb_font		\
+			-fill #000000			\
 			-anchor nw
 
 		$canvas_widget create text 35 160	\
 			-text [mc "Note"]		\
 			-font $cb_font			\
+			-fill #000000			\
 			-anchor e
 		$canvas_widget create window 40 160		\
 			-window [ttk::entry $canvas_widget.usr_note	\
@@ -290,7 +295,8 @@ class LedDisplay {
 	## Value of configuration menu variable "keep_win_on_top" has been changed
 	 # @return void
 	public method keep_win_on_top_changed {} {
-		set keep_win_on_top $LedDisplay::menu_keep_win_on_top
+		set keep_win_on_top [expr {!$keep_win_on_top}]
+		set ::${class_name}::menu_keep_win_on_top $keep_win_on_top
 		if {$keep_win_on_top} {
 			wm attributes $win -topmost 1 -alpha 0.8
 		} else {
@@ -664,7 +670,7 @@ class LedDisplay {
 			# Accept new state of ports
 			set state [$project pale_get_true_state]
 			new_state state
-			update
+			update idletasks
 
 		# Fail
 		}]} then {

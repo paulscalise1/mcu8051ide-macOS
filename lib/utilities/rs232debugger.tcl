@@ -1175,13 +1175,14 @@ class RS232Debugger {
 		wm title $dialog [mc "Data lost"]
 		wm resizable $dialog 0 0
 		wm transient $dialog $win
-		catch {grab $dialog}
 		wm protocol $dialog WM_DELETE_WINDOW "
 			grab release $dialog
 			destroy $dialog
 		"
 		raise $dialog
-		focus -force $dialog.frm.ok_button
+		update idletasks
+		catch {grab $dialog}
+		catch {focus -force $dialog.frm.ok_button}
 		tkwait window $dialog
 	}
 
@@ -1303,7 +1304,7 @@ class RS232Debugger {
 			-type ok -icon warning	\
 			-message [mc "There is something wrong with the port. Closing connection and disabling reception on this channel!"]
 
-		update
+		update idletasks
 	}
 
 	## Safely terminate connection to the HW interface

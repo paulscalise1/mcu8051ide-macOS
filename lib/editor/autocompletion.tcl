@@ -283,7 +283,7 @@ public method manage_autocompletion_list {line_number} {
  # @return void
 private method invoke_completion_popup_window {mode start_idx end_idx} {
 	if {$invoke_com_win_in_p} {
-		update
+		update idletasks
 		return
 	}
 	set invoke_com_win_in_p 1
@@ -569,7 +569,7 @@ private method invoke_completion_popup_window {mode start_idx end_idx} {
 		place .completion_win -width [expr {$required_width + 30}]	\
 			-height 105 -anchor nw -x $x -y $y -in $editor
 		raise .completion_win
-		update
+		update idletasks
 		catch {
 			grab -global .completion_win
 		}

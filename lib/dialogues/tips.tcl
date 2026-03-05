@@ -166,9 +166,8 @@ namespace eval Tips {
 		}
 		wm transient $win .
 		raise $win
-		catch {
-			grab $win
-		}
+		update idletasks
+		catch {grab $win}
 	}
 
 	## Load definition of tips

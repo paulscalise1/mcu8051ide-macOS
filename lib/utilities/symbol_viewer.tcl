@@ -107,7 +107,7 @@ class SymbolViewer {
 		wm title $win [mc "Assembly symbol table - MCU 8051 IDE"]
 		wm minsize $win 520 350
 		wm protocol $win WM_DELETE_WINDOW "$this close_window"
-		update
+		update idletasks
 		catch {
 			wm geometry $win [regsub {^\=?\d+x\d+} [lindex $config_list $i]	\
 				[regsub {\+\d+\+\d+$} [wm geometry $win] {}]	\

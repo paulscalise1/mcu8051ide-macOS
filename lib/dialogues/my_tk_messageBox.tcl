@@ -175,7 +175,7 @@ namespace eval my_tk_messageBox {
 			set ::my_tk_messageBox::return_value {}
 		"
 
-		update
+		update idletasks
 
 		if {![winfo exists $dialog]} {
 			return $return_value

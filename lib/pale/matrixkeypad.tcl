@@ -154,7 +154,8 @@ class MatrixKeyPad {
 	## Value of configuration menu variable "keep_win_on_top" has been changed
 	 # @return void
 	public method keep_win_on_top_changed {} {
-		set keep_win_on_top $MatrixKeyPad::menu_keep_win_on_top
+		set keep_win_on_top [expr {!$keep_win_on_top}]
+		set ::${class_name}::menu_keep_win_on_top $keep_win_on_top
 		if {$keep_win_on_top} {
 			wm attributes $win -topmost 1 -alpha 0.8
 		} else {
@@ -227,24 +228,29 @@ class MatrixKeyPad {
 		$canvas_widget create text 36 20	\
 			-text [mc "PORT"]		\
 			-font $cb_font			\
+			-fill #000000			\
 			-anchor e
 		$canvas_widget create text 38 20	\
 			-text [mc "BIT"]		\
 			-font $cb_font			\
+			-fill #000000			\
 			-anchor w
 
 		$canvas_widget create text 80 175	\
 			-text [mc "PORT"]		\
 			-font $cb_font			\
+			-fill #000000			\
 			-anchor e
 		$canvas_widget create text 80 195	\
 			-text [mc "BIT"]		\
 			-font $cb_font			\
+			-fill #000000			\
 			-anchor e
 
 		$canvas_widget create text 35 220	\
 			-text [mc "Note"]		\
 			-font $cb_font			\
+			-fill #000000			\
 			-anchor e
 		$canvas_widget create window 40 220		\
 			-window [ttk::entry $canvas_widget.usr_note	\
@@ -523,6 +529,7 @@ class MatrixKeyPad {
 		set text($i) [$canvas_widget create text 	\
 			[expr {$x + 20}] [expr {$y + 15}]	\
 			-font $cb_font_n			\
+			-fill #000000			\
 			-text [lindex {1 2 3 A 4 5 6 B 7 8 9 C * 0 # D} $i]	\
 		]
 
@@ -619,7 +626,8 @@ class MatrixKeyPad {
 	## Value of configuration menu variable "menu_radio_buttons" has been changed
 	 # @return void
 	public method value_radio_buttons_changed {} {
-		set radio_buttons $::MatrixKeyPad::menu_radio_buttons
+		set radio_buttons [expr {!$radio_buttons}]
+		set ::${class_name}::menu_radio_buttons $radio_buttons
 	}
 
 	# ------------------------------------------------------------------
@@ -853,7 +861,7 @@ class MatrixKeyPad {
 			# Adjust internal logic and the rest of PALE
 			evaluete_enaged_pins
 			$project pale_reevaluate_IO
-			update
+			update idletasks
 
 		# Fail
 		}]} then {

@@ -206,14 +206,17 @@ class SimpleKeyPad {
 		$canvas_widget create text 5 $cb_p_y	\
 			-text [mc "PORT"]		\
 			-font $cb_font			\
+			-fill #000000			\
 			-anchor w
 		$canvas_widget create text 5 $cb_b_y	\
 			-text [mc "BIT"]		\
 			-font $cb_font			\
+			-fill #000000			\
 			-anchor w
 		$canvas_widget create text 32 $usr_n_y	\
 			-text [mc "Note"]		\
 			-font $cb_font			\
+			-fill #000000			\
 			-anchor e
 		$canvas_widget create window 37 $usr_n_y	\
 			-window [ttk::entry $canvas_widget.usr_note	\
@@ -414,6 +417,7 @@ class SimpleKeyPad {
 			[expr {$x + 20}] [expr {$y + 15}]	\
 			-font $cb_font_n			\
 			-text [lindex {A B C D E F G H} $i]	\
+			-fill #000000			\
 		]
 
 		# Set event bindings for the key
@@ -446,13 +450,15 @@ class SimpleKeyPad {
 	## Value of configuration menu variable "menu_radio_buttons" has been changed
 	 # @return void
 	public method value_radio_buttons_changed {} {
-		set radio_buttons $::SimpleKeyPad::menu_radio_buttons
+		set radio_buttons [expr {!$radio_buttons}]
+		set ::${class_name}::menu_radio_buttons $radio_buttons
 	}
 
 	## Value of configuration menu variable "keep_win_on_top" has been changed
 	 # @return void
 	public method keep_win_on_top_changed {} {
-		set keep_win_on_top $SimpleKeyPad::menu_keep_win_on_top
+		set keep_win_on_top [expr {!$keep_win_on_top}]
+		set ::${class_name}::menu_keep_win_on_top $keep_win_on_top
 		if {$keep_win_on_top} {
 			wm attributes $win -topmost 1 -alpha 0.8
 		} else {
@@ -634,7 +640,7 @@ class SimpleKeyPad {
 			# Adjust internal logic and the rest of PALE
 			evaluete_enaged_pins
 			$project pale_reevaluate_IO
-			update
+			update idletasks
 
 		# Fail
 		}]} then {

@@ -641,7 +641,13 @@ class Pale {
 		foreach dev $output_devices {
 			$dev new_state last_state
 		}
-		update
+		# During fast 'sim_run', skip per-instruction canvas redraws — same
+		# logic as $graw_graph above. The sim_run loop calls 'update' every
+		# GUI_UPDATE_INT ms which handles both canvas redraws and user events.
+		# During step / animate / idle, redraw immediately so the LCD updates.
+		if {![$this sim_run_in_progress]} {
+			update idletasks
+		}
 	}
 
 	## Determinate resulting value when two values clash on one wire
@@ -765,7 +771,7 @@ class Pale {
 		foreach dev $output_devices {
 			$dev new_state last_state
 		}
-		update
+		update idletasks
 	}
 
 	## Call input devices to evaluate input values

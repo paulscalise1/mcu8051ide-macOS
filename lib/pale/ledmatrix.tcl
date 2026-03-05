@@ -236,7 +236,8 @@ class LedMatrix {
 	## Value of configuration menu variable "keep_win_on_top" has been changed
 	 # @return void
 	public method keep_win_on_top_changed {} {
-		set keep_win_on_top $LedMatrix::menu_keep_win_on_top
+		set keep_win_on_top [expr {!$keep_win_on_top}]
+		set ::${class_name}::menu_keep_win_on_top $keep_win_on_top
 		if {$keep_win_on_top} {
 			wm attributes $win -topmost 1 -alpha 0.8
 		} else {
@@ -483,23 +484,28 @@ class LedMatrix {
 		$canvas_widget create text 70 $cb_p_y	\
 			-text [mc "PORT"]		\
 			-font $cb_font			\
+			-fill #000000			\
 			-anchor e
 		$canvas_widget create text 70 $cb_b_y	\
 			-text [mc "BIT"]		\
 			-font $cb_font			\
+			-fill #000000			\
 			-anchor e
 		$canvas_widget create text [expr {$x_0 - 53}] [expr {$y_0 - 2*$sep}]	\
 			-text [mc "PORT"]		\
 			-font $cb_font			\
+			-fill #000000			\
 			-anchor ne
 		$canvas_widget create text [expr {$x_0 - 50}] [expr {$y_0 - 2*$sep}]	\
 			-text [mc "BIT"]		\
 			-font $cb_font			\
+			-fill #000000			\
 			-anchor nw
 
 		$canvas_widget create text 35 278	\
 			-text [mc "Note"]		\
 			-font $cb_font			\
+			-fill #000000			\
 			-anchor e
 		$canvas_widget create window 40 278			\
 			-window [ttk::entry $canvas_widget.usr_note	\
@@ -936,7 +942,7 @@ class LedMatrix {
 			# Accept new state of ports
 			set state [$project pale_get_true_state]
 			new_state state
-			update
+			update idletasks
 
 		# Fail
 		}]} then {

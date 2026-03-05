@@ -58,9 +58,25 @@ public method Configure {} {
 	if {$editor_width != $width} {
 		set editor_width $width
 		set highlighted_lines [string repeat 0 [string bytelength $highlighted_lines]]
-		highlight_visible_area
+		# On macOS, <Configure> fires on every pixel during live resize.
+		# highlight_visible_area re-parses all visible lines and is expensive;
+		# defer it so it runs once after the drag settles rather than hundreds
+		# of times.  On other platforms fire it immediately as before.
+		if {[tk windowingsystem] eq {aqua}} {
+			catch {after cancel $::_editor_highlight_after($this)}
+			set ::_editor_highlight_after($this) \
+				[after 80 [list catch [list $this highlight_visible_area]]]
+		} else {
+			highlight_visible_area
+		}
 	} elseif {$eh_org != $editor_height} {
-		highlight_visible_area
+		if {[tk windowingsystem] eq {aqua}} {
+			catch {after cancel $::_editor_highlight_after($this)}
+			set ::_editor_highlight_after($this) \
+				[after 80 [list catch [list $this highlight_visible_area]]]
+		} else {
+			highlight_visible_area
+		}
 	}
 }
 
@@ -390,7 +406,7 @@ public method control_shift_updown {up__down} {
 	manage_autocompletion_list $idx
 
 	# Check spelling on the other line
-	update
+	update idletasks
 	spellcheck_check_all [expr {int([$editor index insert])}] 1
 
 	# Move insertion cursor
@@ -641,7 +657,7 @@ public method shift_enter {} {
 
 	# Recalcutlate Left frame, status bar and right panel
 	$editor see insert
-	update
+	update idletasks
 	recalc_left_frame
 	recalc_status_counter {}
 	rightPanel_adjust [expr {int([$editor index insert])}]
@@ -699,7 +715,7 @@ public method enter {} {
 
 	# Recalcutlate Left frame, status bar and right panel
 	$editor see $idx.0
-	update
+	update idletasks
 	recalc_left_frame
 	recalc_status_counter {}
 	rightPanel_adjust $idx
@@ -841,13 +857,13 @@ public method Key {key {key_k {}}} {
 	if {[llength $key_handler_buffer]} {
 		set key [lindex $key_handler_buffer 0]
 		set key_handler_buffer [lreplace $key_handler_buffer 0 0]
-		update
+		update idletasks
 		set scroll_in_progress 0		;# Unblock scrolling
 		set key_handler_in_progress 0
 		Key $key
 	}
 	set key_handler_in_progress 0
-	update
+	update idletasks
 	set scroll_in_progress 0		;# Unblock scrolling
 	spellcheck_change_detected_post
 }
@@ -873,7 +889,7 @@ public method key_delete {} {
 	$this resetUpDownIndex
 	$this recalc_left_frame
 	$this parse [expr {int([$editor index insert])}]
-	update
+	update idletasks
 }
 
 ## Handles event: 'Key-Backspace'
@@ -898,7 +914,7 @@ public method key_backspace {} {
 	$this resetUpDownIndex
 	$this recalc_left_frame
 	$this parse [expr {int([$editor index insert])}]
-	update
+	update idletasks
 }
 
 # >>> File inclusion guard

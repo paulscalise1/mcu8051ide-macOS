@@ -1710,7 +1710,7 @@ public method check_file_change_notif {} {
 		grab release $dialog
 		destroy $dialog
 	"
-	update
+	update idletasks
 	catch {
 		grab $dialog
 	}
@@ -1870,7 +1870,7 @@ public method change_letter_case {options} {
 				if {![expr {$i % 50}]} {
 					# Update progress bar
 					incr ::X::compilation_progress
-					update
+					update idletasks
 
 					# Conditional abort
 					if {$changeLCase_abort} {
@@ -2090,7 +2090,7 @@ public method paste {{use_X_sel 0} {x {}} {y {}}} {
 
 	rewrite_breakpoint_tags
 
-	update
+	update idletasks
 	set critical_edit_proc 0
 	return 1
 }
@@ -2115,7 +2115,7 @@ public method undo {} {
 		rightPanel_adjust [expr {int([$editor index insert])}]
 		$editor see [$editor index insert]
 		set highlighted_lines [string repeat 0 [string bytelength $highlighted_lines]]
-		update
+		update idletasks
 		highlight_visible_area
 		catch {
 			$editor tag remove sel 0.0 end
@@ -2143,7 +2143,7 @@ public method redo {} {
 		rightPanel_adjust [expr {int([$editor index insert])}]
 		$editor see [$editor index insert]
 		set highlighted_lines [string repeat 0 [string bytelength $highlighted_lines]]
-		update
+		update idletasks
 		highlight_visible_area
 		catch {
 			$editor tag remove sel 1.0 end
@@ -2174,7 +2174,7 @@ public method cut {} {
 		$editor see insert
 		set line [expr {int([$editor index insert])}]
 		parse $line
-		update
+		update idletasks
 		recalc_left_frame
 		rightPanel_adjust $line
 		set critical_edit_proc 0
@@ -2196,7 +2196,7 @@ public method delete_current_line {} {
 	$this resetUpDownIndex
 	$this recalc_left_frame
 	$this parse [expr {int([$editor index insert])}]
-	update
+	update idletasks
 }
 
 ## Insure that command line is focused
@@ -2206,7 +2206,7 @@ public method cmd_line_force_on {} {
 	if {![winfo viewable $cmd_line]} {
 		pack $cmd_line -side top -fill x
 	}
-	update
+	update idletasks
 }
 
 ## Insure that command line is NOT focused
@@ -2219,7 +2219,7 @@ public method cmd_line_force_off {} {
 		pack forget $cmd_line
 		focus $editor
 	}
-	update
+	update idletasks
 }
 
 ## Kill child processes
@@ -2336,7 +2336,7 @@ public method document_current_func {} {
 	recalc_left_frame
 	recalc_status_counter {}
 	$editor see $line_number.0
-	update
+	update idletasks
 	rightPanel_adjust $line_number
 	parse $line_number
 	highlight_visible_area

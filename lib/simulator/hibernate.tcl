@@ -189,7 +189,7 @@ class Hibernate {
 		wm minsize $win 300 140
 		wm protocol $win WM_DELETE_WINDOW "$this hibernate_close_progress_dialog"
 		wm transient $win .
-		update
+		update idletasks
 		catch {
 			grab $win
 			raise $win
@@ -314,7 +314,7 @@ class Hibernate {
 				}
 			}
 			incr hib_progress_d
-			update
+			update idletasks
 		}
 		puts -nonewline $file "\n\t\t</xram>\n"
 		 # Special function registers
@@ -341,7 +341,7 @@ class Hibernate {
 				}
 			}
 			incr hib_progress_d
-			update
+			update idletasks
 		}
 		puts -nonewline $file "\n\t\t</eeprom>\n"
 		 # Special function registers
@@ -411,7 +411,7 @@ class Hibernate {
 
 			if {!($i % 10)} {
 				incr hib_progress_s
-				update
+				update idletasks
 			}
 			if {$hib_abort} {
 				catch {
@@ -779,7 +779,7 @@ class Hibernate {
 						}
 					}
 					incr hib_progress_d
-					update
+					update idletasks
 				}
 			}
 			{eeprom} {	;# Data EEPROM in decimal
@@ -795,7 +795,7 @@ class Hibernate {
 						}
 					}
 					incr hib_progress_d
-					update
+					update idletasks
 				}
 			}
 			{addresses} {	;# SFR decimal addresses in the same order as in tag values
@@ -816,7 +816,7 @@ class Hibernate {
 				incr counter
 				if {!($counter % 10)} {
 					incr hib_progress_s
-					update
+					update idletasks
 				}
 			}
 		}
@@ -963,7 +963,7 @@ class Hibernate {
 			destroy $win"
 		wm transient $win .hibernation_progress_dialog
 
-		update
+		update idletasks
 		catch {
 			grab $win
 			raise $win

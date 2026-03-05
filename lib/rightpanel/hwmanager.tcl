@@ -367,9 +367,9 @@ class HwManager {
 			wm protocol $dialog WM_DELETE_WINDOW "
 				grab release $dialog
 				destroy $dialog"
-			update
+			update idletasks
 			raise $dialog
-			grab $dialog
+			catch {grab $dialog}
 			wm transient $dialog .
 			tkwait window $dialog
 		}

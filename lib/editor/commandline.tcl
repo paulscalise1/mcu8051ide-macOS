@@ -1081,7 +1081,7 @@ private method cmd_line_menu_postdown {commands} {
 			"$this cmd_line_listbox_sel \[$cmd_line_listbox selection get\]"
 		$cmd_line_listbox bindText <Button-1>	"$this cmd_line_listbox_sel"
 		$cmd_line_listbox bindText <Enter>	"
-			update
+			update idletasks
 			%W selection clear
 			%W selection set"
 
@@ -1257,7 +1257,7 @@ private method cmd_line_help_window {header content} {
 	catch {
 		wm transient $win .
 		grab -global $win
-		update
+		update idletasks
 		wm geometry $win "=[winfo width $cmd_line]x150+${x}+${y}"
 	}
 }
@@ -1279,7 +1279,7 @@ public method cmd_line_focus {{no_cmd_line_on 0}} {
 	} else {
 		focus $cmd_line
 	}
-	update
+	update idletasks
 }
 
 # >>> File inclusion guard

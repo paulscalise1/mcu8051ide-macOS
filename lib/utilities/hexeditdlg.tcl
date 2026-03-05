@@ -797,7 +797,8 @@ class HexEditDlg {
 			wm minsize $dialog 500 250
 			wm protocol $dialog WM_DELETE_WINDOW "grab release $dialog; destroy $dialog"
 			wm transient $dialog $win
-			grab $dialog
+			update idletasks
+			catch {grab $dialog}
 			raise $dialog
 			tkwait window $dialog
 			return 0
@@ -909,7 +910,7 @@ class HexEditDlg {
 		set mode [lindex {hex dec oct} [$mode_combo_box current]]
 		set ::HexEditDlg::mode_${obj_idx} $mode
 		sbar_show {Working ...}
-		update
+		update idletasks
 		$hexeditor switch_mode $mode
 		sbar_show {}
 	}
@@ -1066,7 +1067,7 @@ class HexEditDlg {
 	public method adjust_mode {} {
 		$mode_combo_box current [lsearch {hex dec oct} [subst -nocommands "\$::HexEditDlg::mode_${obj_idx}"]]
 		sbar_show {Working ...}
-		update
+		update idletasks
 		$hexeditor switch_mode [subst -nocommands "\$::HexEditDlg::mode_${obj_idx}"]
 		sbar_show {Working}
 	}
@@ -1227,7 +1228,7 @@ class HexEditDlg {
 		}
 
 		# Restore original cursor position
-		update
+		update idletasks
 		$hexeditor setCurrentCell $current_cursor_pos
 		$hexeditor seeCell $current_cursor_pos
 	}
@@ -1394,7 +1395,7 @@ class HexEditDlg {
 		refresh
 
 		# Restore original cursor position
-		update
+		update idletasks
 		$hexeditor setCurrentCell $current_cursor_pos
 		$hexeditor seeCell $current_cursor_pos
 
@@ -1566,7 +1567,7 @@ class HexEditDlg {
 
 			# Update Progress Dialog
 			incr ::X::saving_progress
-			update
+			update idletasks
 			# Optionaly abort
 			if {${::X::abort_saving}} {
 				set abort_saving 0

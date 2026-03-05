@@ -376,8 +376,10 @@ class MultiplexedLedDisplay {
 			]
 
 			$canvas_widget create text $txA_x $txA_y	\
+			-fill #000000			\
 				-text $i -font $cb_font
 			$canvas_widget create text $txB_x $txB_y	\
+			-fill #000000			\
 				-text [expr {3 - $i}] -font $cb_font
 
 			incr tr_y 40
@@ -413,6 +415,7 @@ class MultiplexedLedDisplay {
 		$canvas_widget create text 40 210	\
 			-text [mc "Note"]		\
 			-font $cb_font			\
+			-fill #000000			\
 			-anchor e
 		$canvas_widget create window 45 210		\
 			-window [ttk::entry $canvas_widget.usr_note	\
@@ -438,7 +441,8 @@ class MultiplexedLedDisplay {
 	## Value of configuration menu variable "keep_win_on_top" has been changed
 	 # @return void
 	public method keep_win_on_top_changed {} {
-		set keep_win_on_top $MultiplexedLedDisplay::menu_keep_win_on_top
+		set keep_win_on_top [expr {!$keep_win_on_top}]
+		set ::${class_name}::menu_keep_win_on_top $keep_win_on_top
 		if {$keep_win_on_top} {
 			wm attributes $win -topmost 1 -alpha 0.8
 		} else {
@@ -1124,7 +1128,7 @@ class MultiplexedLedDisplay {
 			# Accept new state of ports
 			set state [$project pale_get_true_state]
 			new_state state
-			update
+			update idletasks
 
 		# Fail
 		}]} then {

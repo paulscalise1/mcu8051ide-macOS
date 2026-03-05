@@ -237,7 +237,8 @@ class VirtualUARTTerminal {
 	## Value of configuration menu variable "keep_win_on_top" has been changed
 	 # @return void
 	public method keep_win_on_top_changed {} {
-		set keep_win_on_top $VirtualUARTTerminal::menu_keep_win_on_top
+		set keep_win_on_top [expr {!$keep_win_on_top}]
+		set ::${class_name}::menu_keep_win_on_top $keep_win_on_top
 		if {$keep_win_on_top} {
 			wm attributes $win -topmost 1 -alpha 0.8
 		} else {
@@ -593,6 +594,7 @@ class VirtualUARTTerminal {
 		$canvas create text 45 0			\
 			-text {TxD}				\
 			-font ${::Simulator_GUI::bitfont}	\
+			-fill #000000			\
 			-anchor ne
 		$canvas create window 30 40	\
 			-window	$cb(p0)		\
@@ -603,15 +605,18 @@ class VirtualUARTTerminal {
 		$canvas create text 45 20			\
 			-text {SBUF-T}				\
 			-font ${::Simulator_GUI::bitfont}	\
+			-fill #000000			\
 			-anchor ne
 		$canvas create text 210 0			\
 			-text {Parity}				\
 			-font ${::Simulator_GUI::bitfont}	\
+			-fill #000000			\
 			-anchor nw
 		set reg_val(txd) [$canvas create text 210 20	\
 			-text { -- }				\
 			-font ${::Simulator_GUI::bitfont}	\
 			-anchor nw				\
+			-fill #000000			\
 		]
 
 		set labels [list S 0 1 2 3 4 5 6 7 P S]
@@ -633,6 +638,7 @@ class VirtualUARTTerminal {
 				[expr {$x + ($rect_size / 2)}]	\
 				[expr {$y + ($rect_size / 2)}]	\
 				-text [lindex $labels $i]	\
+				-fill #000000			\
 				-font $tiny_font
 
 			incr x $rect_size
@@ -684,6 +690,7 @@ class VirtualUARTTerminal {
 		$canvas create text 45 0			\
 			-text {RxD}				\
 			-font ${::Simulator_GUI::bitfont}	\
+			-fill #000000			\
 			-anchor ne
 		$canvas create window 30 40	\
 			-window	$cb(p1)		\
@@ -694,15 +701,18 @@ class VirtualUARTTerminal {
 		$canvas create text 45 20			\
 			-text {SBUF-R}				\
 			-font ${::Simulator_GUI::bitfont}	\
+			-fill #000000			\
 			-anchor ne
 		$canvas create text 210 0			\
 			-text {Parity}				\
 			-font ${::Simulator_GUI::bitfont}	\
+			-fill #000000			\
 			-anchor nw
 		set reg_val(rxd) [$canvas create text 210 20	\
 			-text { -- }				\
 			-font ${::Simulator_GUI::bitfont}	\
 			-anchor nw				\
+			-fill #000000			\
 		]
 
 		set labels [list S 0 1 2 3 4 5 6 7 P S]
@@ -724,6 +734,7 @@ class VirtualUARTTerminal {
 				[expr {$x + ($rect_size / 2)}]	\
 				[expr {$y + ($rect_size / 2)}]	\
 				-font $tiny_font	\
+				-fill #000000			\
 				-text [lindex $labels $i]
 
 			incr x $rect_size
@@ -1616,7 +1627,7 @@ class VirtualUARTTerminal {
 			# Adjust internal logic and the rest of PALE
 			evaluete_enaged_pins
 			$project pale_reevaluate_IO
-			update
+			update idletasks
 
 		if {[catch {
 		# Fail

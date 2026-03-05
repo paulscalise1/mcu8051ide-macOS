@@ -189,8 +189,8 @@ class LcdHD44780 {
 
 	private variable disp_frame			;# Widget: The black frame around the LCD dot matrix
 	private variable signal_label			;# Array of canvas objects: Labels above ComboBoxes for GPIO signal selection
-	private variable lcd_pixel			;# Array of canvas objects: Segments of LCD dot matrix
-	private variable cgram_pixel			;# Array of canvas objects: Same as lcd_pixel but for CGRAM
+	private variable lcd_pixel			;# Array of {px py} coords in lcd_photo: Segments of LCD dot matrix
+	private variable cgram_pixel			;# Array of {px py} coords in cgram_photo: pixel grid cells of CGRAM viewer
 	private variable entrybox			;# Array of Widgets: Entryboxes showing HD44780 registers, key is name of the register diaplyed the CGRAM viewer
 	private variable status_led			;# Array of Widgets: LEDs showing status of HD44780 flags like: S, F, D, B, etc.
 	private variable inhibit_vcmd		1	;# Bool: Disable validation function for entryboxes like "IR:" or "AC:"
@@ -211,6 +211,16 @@ class LcdHD44780 {
 	private variable signal_RS		0	;# Bool: Signal Register Select
 	private variable signal_RW		0	;# Bool: Signal Read/Write
 	private variable signal_D		0	;# int: Value taken from the data bus
+	private variable sim_was_running	0	;# Bool: sim_run was active in the previous new_state call (used to detect run→stop transition)
+	private variable display_refresh_pending 0	;# Bool: refresh_display scheduled via 'after idle' (pending after sim_run ends)
+	private variable lcd_photo		{}	;# PhotoImage: displayed LCD pixel bitmap (placed on canvas)
+	private variable lcd_photo_item		{}	;# Canvas item ID for the lcd_photo image item
+	private variable lcd_photo_scratch	{}	;# PhotoImage: off-screen scratch — all pixel writes go here, copied to lcd_photo in one shot
+	private variable cgram_photo		{}	;# PhotoImage: displayed CGRAM viewer bitmap (placed on canvas)
+	private variable cgram_photo_item	{}	;# Canvas item ID for the cgram_photo image item
+	private variable cgram_photo_scratch	{}	;# PhotoImage: off-screen scratch for CGRAM viewer
+	private variable cgram_photo_x		0	;# Canvas x coordinate of cgram_photo image origin
+	private variable cgram_photo_y		0	;# Canvas y coordinate of cgram_photo image origin
 
 	## Array of HD44780 configuration flags
 	 # KEY		MEANING WHEN 0			MEANING WHEN 1
@@ -277,6 +287,12 @@ class LcdHD44780 {
 			after cancel $cursor_timer
 		}
 
+		# Delete PhotoImage objects (not tied to the window lifecycle)
+		catch { image delete $lcd_photo }
+		catch { image delete $lcd_photo_scratch }
+		catch { image delete $cgram_photo }
+		catch { image delete $cgram_photo_scratch }
+
 		# Destroy GUI
 		if {[winfo exists $win]} {
 			destroy $win
@@ -286,7 +302,8 @@ class LcdHD44780 {
 	## Value of configuration menu variable "keep_win_on_top" has been changed
 	 # @return void
 	public method keep_win_on_top_changed {} {
-		set keep_win_on_top $LcdHD44780::menu_keep_win_on_top
+		set keep_win_on_top [expr {!$keep_win_on_top}]
+		set ::${class_name}::menu_keep_win_on_top $keep_win_on_top
 		if {$keep_win_on_top} {
 			wm attributes $win -topmost 1 -alpha 0.8
 		} else {
@@ -603,16 +620,19 @@ class LcdHD44780 {
 			-tags connections_configuration	\
 			-text [mc "PORT"]		\
 			-font $common_font		\
+			-fill #000000			\
 			-anchor e
 		$canvas_widget create text $x $cb_b_y	\
 			-tags connections_configuration	\
 			-text [mc "BIT"]		\
 			-font $common_font		\
+			-fill #000000			\
 			-anchor e
 		$canvas_widget create text $x $note_y	\
 			-tags connections_configuration	\
 			-text [mc "NOTE"]		\
 			-font $common_font		\
+			-fill #000000			\
 			-anchor e
 		incr x 5
 		$canvas_widget create window $x $note_y			\
@@ -726,6 +746,13 @@ class LcdHD44780 {
 	## Update content of all entryboxes with the most important HD44780 registers in the panel above the CGRAM viewer
 	 # @return void
 	private method update_entry_boxes {} {
+		# During fast sim_run, skip entry-box widget updates — same
+		# reason as the write_to_log guard: widget ops on every instruction
+		# cycle are expensive on macOS Aqua.  The next 'update' call in the
+		# sim_run loop will reflect any final register values.
+		if {[$project sim_run_in_progress]} {
+			return
+		}
 		set inhibit_vcmd 1
 
 		# Instruction Register
@@ -763,6 +790,7 @@ class LcdHD44780 {
 			-text {IR:}		\
 			-font $common_font	\
 			-anchor e		\
+			-fill #000000			\
 			-tags right_bottom_panel
 		incr x 5
 		set entrybox(IR) [ttk::entry $canvas_widget.ir_ent	\
@@ -783,6 +811,7 @@ class LcdHD44780 {
 			-text {DR:}		\
 			-font $common_font	\
 			-anchor e		\
+			-fill #000000			\
 			-tags right_bottom_panel
 		incr x 5
 
@@ -804,6 +833,7 @@ class LcdHD44780 {
 			-text {AC:}		\
 			-font $common_font	\
 			-anchor e		\
+			-fill #000000			\
 			-tags right_bottom_panel
 		incr x 5
 		set entrybox(AC) [ttk::entry $canvas_widget.ac_ent	\
@@ -824,6 +854,7 @@ class LcdHD44780 {
 			-text [mc "Shift:"]	\
 			-font $common_font	\
 			-anchor e		\
+			-fill #000000			\
 			-tags right_bottom_panel
 		incr x 5
 		set entrybox(SHIFT) [ttk::entry $canvas_widget.sh_ent	\
@@ -853,89 +884,106 @@ class LcdHD44780 {
 			-text {CGRAM:}				\
 			-font $common_font			\
 			-anchor w				\
+			-fill #000000			\
 			-tags right_bottom_panel
 		incr y_offset 10
 
 		set square_size 4
 		set sep 1
 		set sep2 3
+		set col_step  [expr {$square_size + $sep}]		;# 5 px per dot
+		set char_step [expr {$sep2 + 5 * $col_step}]	;# 28 px per character
 
-		set x $x_offset
-		set y [expr {$y_offset + 0}]
+		# Create PhotoImage for CGRAM viewer pixels (one item replaces 320 rectangles)
+		set photo_w [expr {8 * $char_step}]
+		set photo_h [expr {8 * $col_step}]
+		set cgram_photo [image create photo -width $photo_w -height $photo_h]
+		set cgram_photo_scratch [image create photo -width $photo_w -height $photo_h]
+		$cgram_photo_scratch put $OFF_COLOR -to 0 0 $photo_w $photo_h
+		$cgram_photo copy $cgram_photo_scratch
+		set cgram_photo_item [$canvas_widget create image $x_offset $y_offset -anchor nw -image $cgram_photo]
+		set cgram_photo_x $x_offset
+		set cgram_photo_y $y_offset
+
+		# Bind Button-1 on the cgram photo item; coordinate math identifies which pixel was clicked
+		$canvas_widget bind $cgram_photo_item <Button-1> [list $this cgram_photo_click %x %y]
+
+		# Fill cgram_pixel coordinate array and draw character number labels
 		for {set k 0} {$k < 8} {incr k} {
-
 			for {set i 0} {$i < 8} {incr i} {
 				for {set j 0} {$j < 5} {incr j} {
-					set cgram_pixel($k,$j,$i) [$canvas_widget	\
-						create rectangle $x $y			\
-						[expr {$x + $square_size}]		\
-						[expr {$y + $square_size}]		\
-						-fill $OFF_COLOR			\
-						-outline {#000000}			\
-						-width 0
+					set cgram_pixel($k,$j,$i) [list \
+						[expr {$k * $char_step + $j * $col_step}] \
+						[expr {$i * $col_step}] \
 					]
-
-					foreach event {Enter Leave Button-1} {
-						$canvas_widget bind $cgram_pixel($k,$j,$i) <$event> \
-							[list $this cgram_pixel_event $event $k $j $i]
-					}
-
-					incr x $square_size
-					incr x $sep
 				}
-				incr x [expr {-5 * ($square_size + $sep)}]
-				incr y [expr {$square_size + $sep}]
 			}
-			$canvas_widget create text [expr {$x + (5 * $square_size) / 2}] [expr {$y + 8}] -text $k -font $common_font
-
-			incr x [expr {$sep2 + 5 * ($square_size + $sep)}]
-			incr y [expr {-8 * ($square_size + $sep)}]
+			# Character number label below the pixel grid
+			$canvas_widget create text \
+				[expr {$x_offset + $k * $char_step + (5 * $square_size) / 2}] \
+				[expr {$y_offset + $photo_h + 8}] \
+				-fill #000000			\
+				-text $k -font $common_font
 		}
 	}
 
-	## Handle events on CGRAM viewer character points
-	 # @parm String event	- Event type (e.g. "Leave")
-	 # @parm Int char	- Number of character where it occurred
-	 # @parm Int col	- Column in the character
-	 # @parm Int row	- Row in the character
+	## Handle click on the CGRAM viewer PhotoImage (replaces per-pixel canvas bindings)
+	 # @parm Int cx - Canvas x coordinate of click event
+	 # @parm Int cy - Canvas y coordinate of click event
 	 # @return void
-	public method cgram_pixel_event {event char col row} {
-		switch -- $event {
-			{Enter} { ;# Highlight the cell
-				$canvas_widget itemconfigure $cgram_pixel($char,$col,$row) -width 1
+	public method cgram_photo_click {cx cy} {
+		set char_step 28
+		set col_step  5
+
+		# Convert canvas coords to photo-relative coords
+		set px [expr {$cx - $cgram_photo_x}]
+		set py [expr {$cy - $cgram_photo_y}]
+
+		# Determine which character, column, and row was clicked
+		set k [expr {$px / $char_step}]
+		set j [expr {($px % $char_step) / $col_step}]
+		set i [expr {$py / $col_step}]
+
+		# Validate: must be within grid bounds and not in the inter-character sep gap
+		if {$k < 0 || $k > 7 || $j < 0 || $j > 4 || $i < 0 || $i > 7} { return }
+		if {($px % $char_step) >= 5 * $col_step} { return }
+
+		# Invert the CGRAM pixel value
+		set value [lindex $cgram [list $k $i $j]]
+		set value [expr {!$value}]
+		lset cgram [list $k $i $j] $value
+
+		set color [expr {$value ? $ON_COLOR : $OFF_COLOR}]
+		set coords $cgram_pixel($k,$j,$i)
+		set ppx [lindex $coords 0]
+		set ppy [lindex $coords 1]
+		$cgram_photo_scratch put $color -to $ppx $ppy [expr {$ppx+4}] [expr {$ppy+4}]
+		_schedule_cgram_flush
+
+		# Synchronize CGRAM hex editor if visible
+		if {$cgram_hexeditor != {}} {
+			set val 0
+			for {set jj 0} {$jj < 5} {incr jj} {
+				set val [expr {$val | (([lindex $cgram [list $k $i $jj]] ? 1 : 0) << $jj)}]
 			}
-			{Leave} { ;# "Unhighlight" cell
-				$canvas_widget itemconfigure $cgram_pixel($char,$col,$row) -width 0
-			}
-			{Button-1} {	;# Invert the cell and also adjust the CGRAM accordingly
-				set value [lindex $cgram [list $char $row $col]]
-				set value [expr {!$value}]
-
-				lset cgram [list $char $row $col] $value
-
-				if {$value} {
-					$canvas_widget itemconfigure $cgram_pixel($char,$col,$row) -fill $ON_COLOR
-				} else {
-					$canvas_widget itemconfigure $cgram_pixel($char,$col,$row) -fill $OFF_COLOR
-				}
-
-				if {$cgram_hexeditor != {}} {
-					set val 0
-					for {set j 0} {$j < 5} {incr j} {
-						set val [expr {$val | (([lindex $cgram [list $char $row $j]] ? 1 : 0) << $j)}]
-					}
-
-					set addr [expr {($char << 3) | $row}]
-					$cgram_hexeditor setValue $addr $val
-					$cgram_hexeditor setHighlighted $addr 1
-				}
-			}
+			set addr [expr {($k << 3) | $i}]
+			$cgram_hexeditor setValue $addr $val
+			$cgram_hexeditor setHighlighted $addr 1
 		}
+	}
+
+	## Handle events on CGRAM viewer character points (legacy; now a no-op since bindings are on cgram_photo_item)
+	public method cgram_pixel_event {event char col row} {
 	}
 
 	## Synchronize all of the status LEDs with current state of the HD44780 core
 	 # @return void
 	private method adjust_status_leds {} {
+		# Skip canvas updates during fast sim_run; the sim_run loop's
+		# periodic 'update' will redraw the canvas when it fires.
+		if {[$project sim_run_in_progress]} {
+			return
+		}
 		foreach key $STATUS_LEDS_NAMES {
 			if {$diver_cfg($key)} {
 				set image {dot}
@@ -1029,10 +1077,27 @@ class LcdHD44780 {
 		set square_size 3
 		set sep 1
 		set sep2 3
+		set char_rows [expr {8 + 2 * $lcd_char_size}]
+		set col_step  [expr {$sep2 + 5 * ($square_size + $sep)}]	;# 23 px per char column
+		set row_step  [expr {$sep2 + $char_rows * ($square_size + $sep)}]	;# px per char row
+		set dot_step  [expr {$square_size + $sep}]	;# 4 px per dot
 
 		if {$display_height == 1} {
 			incr x_offset 50
 		}
+
+		# Create the PhotoImage for LCD pixels before the frame so the 1-px
+		# frame border is drawn on top (higher z-order).
+		set photo_w [expr {$display_width  * $col_step}]
+		set photo_h [expr {$display_height * $row_step}]
+		set lcd_photo [image create photo -width $photo_w -height $photo_h]
+		set lcd_photo_scratch [image create photo -width $photo_w -height $photo_h]
+		$lcd_photo_scratch put $OFF_COLOR -to 0 0 $photo_w $photo_h
+		$lcd_photo copy $lcd_photo_scratch
+		set lcd_photo_item [$canvas_widget create image \
+			[expr {$x_offset + $sep2}] [expr {$y_offset + $sep2}] \
+			-anchor nw -image $lcd_photo \
+		]
 
 		set disp_frame [$canvas_widget create rectangle $x_offset $y_offset \
 			[expr {$x_offset + $sep2 - $sep + $display_width * ($sep2 + 5 * ($square_size + $sep))}] \
@@ -1040,33 +1105,18 @@ class LcdHD44780 {
 			-outline {#000000} -width 1 \
 		]
 
-		incr x_offset $sep2
-		incr y_offset $sep2
-
-		set x $x_offset
-		set y $y_offset
+		# Fill lcd_pixel array with {px py} coordinates relative to photo origin.
 		for {set row 0} {$row < $display_height} {incr row} {
 			for {set col 0} {$col < $display_width} {incr col} {
-				for {set i 0} {$i < (8 + 2 * $lcd_char_size)} {incr i} {
+				for {set i 0} {$i < $char_rows} {incr i} {
 					for {set j 0} {$j < 5} {incr j} {
-						set lcd_pixel($col,$row,$j,$i) [$canvas_widget	\
-							create rectangle $x $y		\
-							[expr {$x + $square_size}]	\
-							[expr {$y + $square_size}]	\
-							-fill $OFF_COLOR		\
-							-width 0
+						set lcd_pixel($col,$row,$j,$i) [list \
+							[expr {$col * $col_step + $j * $dot_step}] \
+							[expr {$row * $row_step + $i * $dot_step}] \
 						]
-						incr x $square_size
-						incr x $sep
 					}
-					incr x [expr {-5 * ($square_size + $sep)}]
-					incr y [expr {$square_size + $sep}]
 				}
-				incr x [expr {$sep2 + 5 * ($square_size + $sep)}]
-				incr y [expr {(-8 - 2 * $lcd_char_size) * ($square_size + $sep)}]
 			}
-			set x $x_offset
-			incr y [expr {$sep2 + (8 + 2 * $lcd_char_size) * ($square_size + $sep)}]
 		}
 	}
 
@@ -1465,13 +1515,15 @@ class LcdHD44780 {
 	## Informs the HD44780 simulator about change of _no_delays flag (used by configuration menu)
 	 # @return void
 	public method no_delays_changed {} {
-		set no_delays ${::LcdHD44780::_no_delays}
+		set no_delays [expr {!$no_delays}]
+		set ::${class_name}::_no_delays $no_delays
 	}
 
 	## Informs the HD44780 simulator about change of _ignore_errors flag (used by configuration menu)
 	 # @return void
 	public method ignore_errors_changed {} {
-		set ignore_errors ${::LcdHD44780::_ignore_errors}
+		set ignore_errors [expr {!$ignore_errors}]
+		set ::${class_name}::_ignore_errors $ignore_errors
 	}
 
 	## Informs the HD44780 simulator about change of character size (used by configuration menu)
@@ -1501,9 +1553,13 @@ class LcdHD44780 {
 		}
 
 		$canvas_widget delete $disp_frame
-		foreach key [array names lcd_pixel] {
-			$canvas_widget delete $lcd_pixel($key)
-		}
+		$canvas_widget delete $lcd_photo_item
+		image delete $lcd_photo
+		image delete $lcd_photo_scratch
+		set lcd_photo {}
+		set lcd_photo_item {}
+		set lcd_photo_scratch {}
+		array unset lcd_pixel
 		draw_display
 		refresh_display
 	}
@@ -1515,6 +1571,17 @@ class LcdHD44780 {
 	private method write_to_log {type string} {
 		# Do not do anything if the log is not available at all
 		if {!$log_enabled || $log_win_text == {}} {
+			return
+		}
+
+		# During fast sim_run, suppress all log writes.  The LCD new_state is
+		# called on every MCU instruction cycle; writing to a Tk text widget
+		# on every call (e.g. for each BF-poll iteration during LCD boot-up)
+		# triggers synchronous Core Animation / AppKit event processing on
+		# macOS Aqua, which can cause re-entrant event delivery and makes the
+		# Stop button appear unresponsive.  Log entries are re-enabled in
+		# step / animate / idle modes, where performance is not critical.
+		if {[$project sim_run_in_progress]} {
 			return
 		}
 
@@ -1562,16 +1629,28 @@ class LcdHD44780 {
 		# Show also a special erro message dialog if this is a case of an error and if it is allowed
 		if {$type == {E} && !$ignore_errors} {
 			if {[$project sim_run_in_progress]} {
-				$project sim_run
+				# During fast sim_run, do NOT stop the sim and do NOT show a
+				# modal dialog.  LCD errors (e.g. floating pins during MCU
+				# initialisation) are transient; stopping the sim here is
+				# disruptive and on macOS the modal dialog can be hidden behind
+				# the IDE window leaving the app hung.  The error is already
+				# written to the log text widget (above) for later inspection.
 			} elseif {[$project sim_anim_in_progress]} {
 				$project sim_animate
+				tk_messageBox \
+					-parent $win \
+					-title [mc "HD44780 ERROR"] \
+					-icon error \
+					-type ok \
+					-message $string
+			} else {
+				tk_messageBox \
+					-parent $win \
+					-title [mc "HD44780 ERROR"] \
+					-icon error \
+					-type ok \
+					-message $string
 			}
-			tk_messageBox \
-				-parent $win \
-				-title [mc "HD44780 ERROR"] \
-				-icon error \
-				-type ok \
-				-message $string
 		}
 	}
 
@@ -1956,8 +2035,11 @@ class LcdHD44780 {
 		# Write to the actual DDRAM
 		set ddram($address) $char_code
 
-		# Synchronize the DDRAM hex editor window if it is allowed and possible
-		if {$ddram_hexeditor != {} && !$do_not_affect_hexeditor} {
+		# Synchronize the DDRAM hex editor window if it is allowed and possible.
+		# Skip during sim_run: hexeditor setValue/setHighlighted are text-widget
+		# operations that trigger AppKit event processing on macOS Aqua → freeze.
+		if {$ddram_hexeditor != {} && !$do_not_affect_hexeditor \
+				&& ![$project sim_run_in_progress]} {
 			$ddram_hexeditor setValue $address $char_code
 			$ddram_hexeditor setHighlighted $address 1
 		}
@@ -2000,7 +2082,7 @@ class LcdHD44780 {
 		}
 
 		## Adjust the LCD dot matrix
-		 # Iterate over rows
+		# Iterate over rows
 		for {set y 0} {$y < $max_char_row} {incr y} {
 			# Iterate over columns
 			for {set x 0} {$x < 5} {incr x} {
@@ -2009,9 +2091,12 @@ class LcdHD44780 {
 				} else {
 					set color $OFF_COLOR
 				}
-				$canvas_widget itemconfigure $lcd_pixel($col,$row,$x,$y) -fill $color
+				set coords $lcd_pixel($col,$row,$x,$y)
+				set px [lindex $coords 0]; set py [lindex $coords 1]
+				$lcd_photo_scratch put $color -to $px $py [expr {$px+3}] [expr {$py+3}]
 			}
 		}
+		_schedule_lcd_flush
 	}
 
 	## Write one row of character patter into the Character Generator RAM (CGRAM)
@@ -2049,11 +2134,16 @@ class LcdHD44780 {
 			} else {
 				set color $OFF_COLOR
 			}
-			$canvas_widget itemconfigure $cgram_pixel($char_code,$col,$row) -fill $color
+			set coords $cgram_pixel($char_code,$col,$row)
+			set ppx [lindex $coords 0]; set ppy [lindex $coords 1]
+			$cgram_photo_scratch put $color -to $ppx $ppy [expr {$ppx+4}] [expr {$ppy+4}]
 		}
+		_schedule_cgram_flush
 
-		# Synchronize the CGRAM hex editor window if it is allowed and possible
-		if {$cgram_hexeditor != {} && !$do_not_affect_hexeditor} {
+		# Synchronize the CGRAM hex editor window if it is allowed and possible.
+		# Skip during sim_run for the same reason as ddram_hexeditor above.
+		if {$cgram_hexeditor != {} && !$do_not_affect_hexeditor \
+				&& ![$project sim_run_in_progress]} {
 			set addr [expr {($char_code << 3) | $row}]
 			$cgram_hexeditor setValue $addr $data
 			$cgram_hexeditor setHighlighted $addr 1
@@ -2078,18 +2168,13 @@ class LcdHD44780 {
 		}
 
 		# Synchronize the CGRAM viewer
-		if {$canvas_widget != {}} {
-			for {set i 0} {$i < 8} {incr i} {
-				for {set y 0} {$y < 8} {incr y} {
-					for {set x 0} {$x < 5} {incr x} {
-						$canvas_widget itemconfigure $cgram_pixel($i,$x,$y) -fill $OFF_COLOR
-					}
-				}
-			}
+		if {$cgram_photo_scratch != {}} {
+			$cgram_photo_scratch put $OFF_COLOR -to 0 0 [image width $cgram_photo_scratch] [image height $cgram_photo_scratch]
+			_schedule_cgram_flush
 		}
 
-		# Synchronize the CGRAM hex editor window if possible
-		if {$cgram_hexeditor != {}} {
+		# Synchronize the CGRAM hex editor window if possible (skip during sim_run)
+		if {$cgram_hexeditor != {} && ![$project sim_run_in_progress]} {
 			for {set i 0} {$i < 64} {incr i} {
 				$cgram_hexeditor setValue $i 0
 			}
@@ -2159,15 +2244,8 @@ class LcdHD44780 {
 	## Ensure that that the LCD dot matrix is clear
 	 # @return void
 	private method clear_display {} {
-		for {set row 0} {$row < $display_height} {incr row} {
-			for {set col 0} {$col < $display_width} {incr col} {
-				for {set i 0} {$i < (8 + 2 * $lcd_char_size)} {incr i} {
-					for {set j 0} {$j < 5} {incr j} {
-						$canvas_widget itemconfigure $lcd_pixel($col,$row,$j,$i) -fill $OFF_COLOR
-					}
-				}
-			}
-		}
+		$lcd_photo_scratch put $OFF_COLOR -to 0 0 [image width $lcd_photo_scratch] [image height $lcd_photo_scratch]
+		_schedule_lcd_flush
 	}
 
 
@@ -2216,8 +2294,11 @@ class LcdHD44780 {
 			}
 			if {$max_char_row != -1} {
 				for {set x 0} {$x < 5} {incr x} {
-					$canvas_widget itemconfigure $lcd_pixel($col,$row,$x,$max_char_row) -fill $OFF_COLOR
+					set coords $lcd_pixel($col,$row,$x,$max_char_row)
+					set px [lindex $coords 0]; set py [lindex $coords 1]
+					$lcd_photo_scratch put $OFF_COLOR -to $px $py [expr {$px+3}] [expr {$py+3}]
 				}
+				_schedule_lcd_flush
 			}
 		}
 	}
@@ -2276,9 +2357,12 @@ class LcdHD44780 {
 			# Draw the black cursor rectangle
 			for {set y 0} {$y < $max_char_row} {incr y} {
 				for {set x 0} {$x < 5} {incr x} {
-					$canvas_widget itemconfigure $lcd_pixel($col,$row,$x,$y) -fill $ON_COLOR
+					set coords $lcd_pixel($col,$row,$x,$y)
+					set px [lindex $coords 0]; set py [lindex $coords 1]
+					$lcd_photo_scratch put $ON_COLOR -to $px $py [expr {$px+3}] [expr {$py+3}]
 				}
 			}
+			_schedule_lcd_flush
 			# Start the LCD cursor blinking timer
 			set cursor_timer [after [expr {int(1000 / $CURSOR_BLINK_FREQUENCY)}] [list $this cursor_timer_callback 1]]
 
@@ -2287,9 +2371,28 @@ class LcdHD44780 {
 			if {$max_char_row != -1} {
 				incr max_char_row -1
 				for {set x 0} {$x < 5} {incr x} {
-					$canvas_widget itemconfigure $lcd_pixel($col,$row,$x,$max_char_row) -fill $ON_COLOR
+					set coords $lcd_pixel($col,$row,$x,$max_char_row)
+					set px [lindex $coords 0]; set py [lindex $coords 1]
+					$lcd_photo_scratch put $ON_COLOR -to $px $py [expr {$px+3}] [expr {$py+3}]
 				}
+				_schedule_lcd_flush
 			}
+		}
+	}
+
+	## Copy lcd_photo_scratch to the displayed lcd_photo.
+	## Tk deduplicates the resulting canvas redraw internally, so calling this
+	## multiple times per event-loop iteration is safe and cheap.
+	private method _schedule_lcd_flush {} {
+		if {$lcd_photo != {} && $lcd_photo_scratch != {}} {
+			$lcd_photo copy $lcd_photo_scratch
+		}
+	}
+
+	## Copy cgram_photo_scratch to the displayed cgram_photo.
+	private method _schedule_cgram_flush {} {
+		if {$cgram_photo != {} && $cgram_photo_scratch != {}} {
+			$cgram_photo copy $cgram_photo_scratch
 		}
 	}
 
@@ -2299,6 +2402,12 @@ class LcdHD44780 {
 	 #
 	 # Note: This function could be also used to refresh the cursor
 	private method move_cursor {new_address} {
+		# During sim_run, skip canvas ops; draw_cursor is called in new_state
+		# transition once sim stops (display_refresh_pending path).
+		if {[$project sim_run_in_progress]} {
+			set cursor_address $new_address
+			return
+		}
 		clear_cursor
 		set cursor_address $new_address
 		draw_cursor
@@ -2308,6 +2417,14 @@ class LcdHD44780 {
 	 # @parm Bool clear - 1 == Clear the cursor rectangle; 0 == Draw the cursor rectangle
 	 # @return void
 	public method cursor_timer_callback {clear} {
+		# During sim_run, each blink fires _schedule_lcd_flush → Tk_ImageChanged
+		# → a 500ms AppKit compositor pass, repeated every 500ms → update blocks
+		# indefinitely. Cancel the blink during sim_run; draw_cursor in the
+		# sim-stop transition (new_state) restarts it when the sim stops.
+		if {[$project sim_run_in_progress]} {
+			set cursor_timer {}
+			return
+		}
 		if {$clear} {
 			clear_cursor
 
@@ -2476,7 +2593,7 @@ class LcdHD44780 {
 				adjust_status_leds
 			}
 		}
-	}
+		}
 
 
 	# ------------------------------------------------------------------
@@ -2500,6 +2617,7 @@ class LcdHD44780 {
 		}
 	}
 
+
 	## Accept new state of ports
 	 # @parm List state	- Port states ( 5 x {8 x bit} -- {bit0 bit1 bit2 ... bit7} )
 	 # @return state	- New port states modified by this device
@@ -2516,6 +2634,43 @@ class LcdHD44780 {
 	public method new_state {_state} {
 		upvar $_state state
 
+		# Detect sim_run -> stopped transition: refresh all suppressed widgets once.
+		set is_running [$project sim_run_in_progress]
+
+		# Detect sim_run start: cancel cursor blink timer.
+		# Each cursor blink reschedules an after-timer that keeps Tk's bare
+		# 'update' call blocked indefinitely (Tk waits for the next timer
+		# expiry via NSApp nextEventMatchingMask:untilDate:). The sim-stop
+		# transition calls draw_cursor which restarts the blink.
+		if {!$sim_was_running && $is_running} {
+			if {$cursor_timer ne {}} {
+				after cancel $cursor_timer
+				set cursor_timer {}
+			}
+		}
+
+		if {$sim_was_running && !$is_running} {
+			adjust_status_leds
+			update_entry_boxes
+			# Refresh LCD canvas and cursor if writes were suppressed during sim_run.
+			# (write_to_ddram, write_to_cgram, move_cursor all skip canvas ops while
+			# sim is running and set display_refresh_pending instead.)
+			if {$display_refresh_pending} {
+				set display_refresh_pending 0
+				refresh_display
+			}
+			# Always call draw_cursor to restart the blink timer (which was
+			# suppressed during sim_run by cursor_timer_callback guard).
+			draw_cursor
+			# Sync DDRAM hex editor from current RAM state (skipped during run)
+			if {$ddram_hexeditor != {}} {
+				for {set _i 0} {$_i < 0x80} {incr _i} {
+					$ddram_hexeditor setValue $_i $ddram($_i)
+				}
+			}
+		}
+		set sim_was_running $is_running
+
 		# Start execution of the last requested instruction. It's done this way in order to cope with
 		#+ multiple new_state invocations during the Virtual HW evaluation loop
 		if {$time_mark != [$project get_run_statistics 2]} {
@@ -2528,6 +2683,13 @@ class LcdHD44780 {
 		set input_error 0
 		set input_error_desc {}
 
+		# During fast sim_run, skip per-instruction pin-label redraws.
+		# On macOS, each canvas itemconfigure can trigger a Core Animation
+		# synchronisation pass (~1 ms/call), adding ~11 ms per instruction
+		# cycle and making the sim appear to freeze.  The sim_run loop calls
+		# 'update' every GUI_UPDATE_INT ms which redraws everything at once.
+		set update_labels [expr {!$is_running}]
+
 		# Iterate over all I/O lines
 		for {set i 0} {$i < 11} {incr i} {
 			# Determinate index in the list of port states
@@ -2535,7 +2697,9 @@ class LcdHD44780 {
 
 			# Not connected
 			if {[lindex $pp 0] == {-} || [lindex $pp 1] == {-}} {
-				$canvas_widget itemconfigure $signal_label($i) -fill {#000000}
+				if {$update_labels} {
+					$canvas_widget itemconfigure $signal_label($i) -fill {#000000}
+				}
 				set signal_value {}
 			} else {
 				set signal_value [lindex $state $pp]
@@ -2564,7 +2728,9 @@ class LcdHD44780 {
 			}
 
 			# Change color of the PIN label
-			$canvas_widget itemconfigure $signal_label($i) -fill $label_color
+			if {$update_labels} {
+				$canvas_widget itemconfigure $signal_label($i) -fill $label_color
+			}
 
 			# Convert any possible I/O signal value to Boolean value
 			switch -- $signal_value {
@@ -2639,7 +2805,7 @@ class LcdHD44780 {
 				}
 			}
 		}
-	}
+		}
 
 	## Withdraw panel window from the screen
 	 # @return void
@@ -2876,7 +3042,7 @@ class LcdHD44780 {
 
 			# Finalize ...
 			clear_modified
-			update
+			update idletasks
 
 			return 1
 		}
@@ -2903,6 +3069,23 @@ class LcdHD44780 {
 		set ::${class_name}::_ignore_errors $ignore_errors
 		set ::${class_name}::_no_delays $no_delays
 		set ::${class_name}::menu_keep_win_on_top $keep_win_on_top
+
+		# On macOS the native NSMenu does not always update -selectimage
+		# based on the Tcl variable value alone.  Explicitly set the image
+		# for each checkbutton entry so the tick is always correct on open.
+		if {$config_menu_created} {
+			foreach {varname label} [list \
+				no_delays      [mc "Disable delays"] \
+				ignore_errors  [mc "Ignore errors"] \
+				keep_win_on_top [mc "Window always on top"] \
+			] {
+				if {![catch {$conf_menu index $label} idx] && $idx ne "none"} {
+					set img [expr {[set $varname] \
+						? "::ICONS::chon" : "::ICONS::choff"}]
+					catch {$conf_menu entryconfigure $idx -image $img}
+				}
+			}
+		}
 	}
 
 	## This method is called after configuration menu is created

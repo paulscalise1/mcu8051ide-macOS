@@ -162,13 +162,12 @@ namespace eval SelectMCU {
 		}
 		wm transient $win $parent
 		raise $win
-		catch {
-			grab $win
-		}
+		update idletasks
+		catch {grab $win}
 
 		# Initialize search bar
 		$search_bar insert end [lindex $initial 0]
-		focus -force $search_bar
+		catch {focus -force $search_bar}
 		$search_bar selection range 0 end
 
 		set selected_mcu [lindex $initial 0]
@@ -1394,7 +1393,7 @@ namespace eval SelectMCU {
 		if {$image != {} && $image != {::ICONS::16::no} && $image != {::ICONS::16::exec}} {
 			image delete $image
 		}
-		update
+		update idletasks
 		if {[winfo exists $image_label]} {
 			if {[catch {
 				$image_label configure -text { } -image [image create photo	\

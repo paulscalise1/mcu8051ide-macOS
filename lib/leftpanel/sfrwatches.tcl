@@ -152,13 +152,13 @@ class SFRWatches {
 			bind $entry <Key-Right>	"
 				focus $text_widget.dec_entry_${i}
 				$text_widget.dec_entry_${i} selection clear
-				update
+				update idletasks
 				$text_widget.dec_entry_${i} icursor 0"
 		} else {
 			bind $entry <Key-Left>	"
 				focus $text_widget.hex_entry_${i}
 				$text_widget.hex_entry_${i} selection clear
-				update
+				update idletasks
 				$text_widget.dec_entry_${i} icursor end"
 		}
 

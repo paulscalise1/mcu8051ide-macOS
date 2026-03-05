@@ -384,7 +384,7 @@ class FindInFiles {
 			-command "$this findinfiles_stop"
 		$text_widget configure -state normal
 		$text_widget delete 0.0 end
-		update
+		update idletasks
 
 		# Determinate list of files
 		set new_mask {}
@@ -447,7 +447,7 @@ class FindInFiles {
 			}
 		}
 		if {[llength $files]} {
-			update
+			update idletasks
 		}
 		return $files
 	}
@@ -481,7 +481,7 @@ class FindInFiles {
 				if {[lindex [$text_widget yview] 1] == 1} {
 					$text_widget see end
 				}
-				update
+				update idletasks
 				if {$abort_variable} {
 					set abort_variable 0
 					return 1
@@ -747,7 +747,7 @@ class FindInFiles {
 
 		# Show the window
 		wm geometry $win "=600x180+$x+$y"
-		update
+		update idletasks
 		catch {
 			grab -global $win
 		}

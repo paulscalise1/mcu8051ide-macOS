@@ -1172,7 +1172,7 @@ class FileList {
 			place ${::FILEDETAILSWIN} -anchor nw				\
 				-x [expr {[winfo pointerx .] - [winfo rootx .] + 20}]	\
 				-y [expr {[winfo pointery .] - [winfo rooty .] + 20}]
-			update
+			update idletasks
 			raise ${::FILEDETAILSWIN}
 		}
 	}
@@ -1814,7 +1814,7 @@ class FileList {
 		editor_procedure {} scroll {scroll +0 lines}
 		editor_procedure {} highlight_visible_area {}
 		editor_procedure {} check_file_change_notif {}
-		update
+		update idletasks
 		rightPanel_switch_page $editor_idx
 		$this todo_switch_editor $editor_idx
 		# Set encoding and eol
@@ -1845,7 +1845,7 @@ class FileList {
 			${::editor_RO_MODE} [expr {[$editor get_language] == 1}]
 		# Focus on the editor
 		focus -force [$editor cget -editor]
-		update
+		update idletasks
 		set switchfile_in_progress 0
 	}
 
@@ -2262,7 +2262,7 @@ class FileList {
 			# Adjust progress dialog
 			incr open_files_progress
 			set open_files_cur_file [file tail $path]
-			update
+			update idletasks
 
 			# Open file
 			if {[openfile $path 0 . $enc $eol $ro 0 $sh] != {}} {
@@ -2334,7 +2334,7 @@ class FileList {
 			wm title $win [mc "File(s) not found"]
 			wm geometry $win 500x200
 			wm protocol $win WM_DELETE_WINDOW [list destroy $win]
-			update
+			update idletasks
 			raise $win
 		}
 
@@ -2405,7 +2405,7 @@ class FileList {
 			wm title $win [mc "File(s) changed"]
 			wm geometry $win 500x200
 			wm protocol $win WM_DELETE_WINDOW [list destroy $win]
-			update
+			update idletasks
 			raise $win
 		}
 	}
@@ -2611,14 +2611,14 @@ class FileList {
 			wm title $win [mc "Add file ?"]
 			wm resizable $win 0 0
 			wm transient $win .
-			catch {grab $win}
 			wm protocol $win WM_DELETE_WINDOW "
 				grab release $win
 				destroy $win
 			"
 			raise $win
-			update
-			focus -force $bottom_frame.button_yes
+			update idletasks
+			catch {grab $win}
+			catch {focus -force $bottom_frame.button_yes}
 			tkwait window $win
 
 			if {$::FileList::dialog_response } {
@@ -2907,7 +2907,7 @@ class FileList {
 		set editor [lindex $editors $objectNumber]
 		if {$editor == {}} {
 			switch_to_last
-			update
+			update idletasks
 		}
 		return [eval "$editor $procedure $arguments"]
 	}
@@ -3142,9 +3142,9 @@ class FileList {
 		openfile {} 0 . def def 0 1 {}
 		switch_to_last
 		set editor [lindex $editors end]
-		update
+		update idletasks
 		$editor create_highlighting_tags
-		update
+		update idletasks
 		rightPanel_add_Editor__create_menu_and_tags
 		$editor parseAll
 		focus [$editor cget -editor]
@@ -3421,7 +3421,7 @@ class FileList {
 			grab release $dialog
 			destroy $dialog
 		"
-		update
+		update idletasks
 		catch {
 			grab $dialog
 		}
@@ -4431,7 +4431,7 @@ class FileList {
 		$listbox_opened_files itemconfigure $item -image ::ICONS::16::2_rightarrow
 		set lastItem $item
 
-		update
+		update idletasks
 		$filetabs_nb raise [lindex $file_descriptors $idx]
 		$filetabs_nb see [lindex $file_descriptors $idx]
 		rightPanel_switch_page $idx
@@ -4734,13 +4734,13 @@ class FileList {
 		wm title $win [mc "Open with other ..."]
 		wm minsize $win 320 80
 		wm transient $win .
-		catch {grab $win}
 		wm protocol $win WM_DELETE_WINDOW "
 			grab release $win
 			destroy $win
 		"
 		raise $win
-		update
+		update idletasks
+		catch {grab $win}
 		$win.ent selection range 0 end
 		focus $win.ent
 		tkwait window $win
@@ -4939,7 +4939,7 @@ class FileList {
 	 # @return void
 	public method filelist_adjust_size_of_tabbar {} {
 		$filetabs_nb see [lindex [$filetabs_nb pages] 0]
-		update
+		update idletasks
 		catch {
 			$filetabs_nb.c configure -height [expr {int(20 * $::font_size_factor)}]
 		}
@@ -4955,7 +4955,7 @@ class FileList {
 	 # @return void
 	public method ensure_that_both_editors_are_properly_initialized {} {
 		if {$splitted} {
-			update
+			update idletasks
 			[lindex $editors $actualEditor] Configure
 			[lindex $editors $actualEditor2] Configure
 		}

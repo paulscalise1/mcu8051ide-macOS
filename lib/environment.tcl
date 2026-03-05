@@ -178,20 +178,44 @@ wm state . normal
 wm minsize . 640 480
 wm geometry . $::CONFIG(WINDOW_GEOMETRY)
 if {$::CONFIG(WINDOW_ZOOMED)} {
-	if {!$::MICROSOFT_WINDOWS} {
+	if {${::tcl_platform(os)} eq {Darwin}} {
+		wm state . zoomed
+	} elseif {!$::MICROSOFT_WINDOWS} {
 		wm attributes . -zoomed $::CONFIG(WINDOW_ZOOMED)
 	} else {
 		wm state . zoomed
 
 		# Without this help windows won't work properly on MS Windows
 		after idle {
-			update
+			update idletasks
 			wm geometry . [wm geometry .]
 		}
 	}
 }
 wm protocol . WM_DELETE_WINDOW {::X::__exit}
-wm iconphoto . ::ICONS::16::mcu8051ide
+# On macOS, Tk may override the dock icon during initialization.
+# Proactively restore it using the full-resolution bundled PNG so the
+# dock shows the correct icon.  On other platforms use the loaded 16x16 icon.
+if {${::tcl_platform(os)} eq {Darwin}} {
+	if {[info exists ::env(MCU8051IDE_RESOURCES)]} {
+		set _icon_png [file join $::env(MCU8051IDE_RESOURCES) mcu8051ide.png]
+		if {[file exists $_icon_png]} {
+			image create photo ::MCU8051IDE_DOCK_ICON:: -file $_icon_png
+			wm iconphoto . ::MCU8051IDE_DOCK_ICON::
+		}
+	}
+	# On macOS Aqua, wm iconphoto on ANY toplevel calls [NSApp setApplicationIconImage:]
+	# regardless of which window it targets — every dialog icon call overwrites the
+	# dock tile with a 16x16 image.  Block all further iconphoto calls; the correct
+	# full-resolution icon was set above and macOS has no per-window dock icons.
+	rename wm ::__wm_orig
+	proc wm {subcmd args} {
+		if {$subcmd eq "iconphoto"} { return }
+		::__wm_orig $subcmd {*}$args
+	}
+} else {
+	wm iconphoto . ::ICONS::16::mcu8051ide
+}
 . configure -bg ${::COMMON_BG_COLOR}
 
 # Dynamic Data Exchange on Microsoft Windows
@@ -935,7 +959,7 @@ proc create_progress_bar {window_path transient textvariable text variable maxim
 	wm transient $window_path $transient
 	wm iconphoto $window_path $iconphoto
 	wm resizable $window_path 0 0
-	update
+	update idletasks
 	catch {
 		raise $window_path
 	}
@@ -1468,7 +1492,7 @@ proc show_statusbar_history {} {
 		grab release .status_bar_history_win
 		destroy .status_bar_history_win
 	"
-	update
+	update idletasks
 	grab -global $win
 	focus $win
 }
@@ -2722,8 +2746,12 @@ proc mainmenu_redraw {} {
 	# Window geometry correction
 	wm geometry . $::CONFIG(WINDOW_GEOMETRY)
 	update idletasks
-	if {!$::MICROSOFT_WINDOWS && $::CONFIG(WINDOW_ZOOMED)} {
-		wm attributes . -zoomed $::CONFIG(WINDOW_ZOOMED)
+	if {$::CONFIG(WINDOW_ZOOMED)} {
+		if {${::tcl_platform(os)} eq {Darwin}} {
+			wm state . zoomed
+		} elseif {!$::MICROSOFT_WINDOWS} {
+			wm attributes . -zoomed $::CONFIG(WINDOW_ZOOMED)
+		}
 	}
 
 	# Enable / Disable menu items
@@ -3138,7 +3166,7 @@ proc show_hide_main_toolbar {} {
 	# Restore position of bottom pane
 	foreach project ${::X::openedProjects} {
 		$project bottomNB_redraw_pane
-		update
+		update idletasks
 		$project editor_procedure {} Configure {}
 	}
 }

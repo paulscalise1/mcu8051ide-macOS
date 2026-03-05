@@ -842,6 +842,15 @@ class Editor {
 		bind $editor <Control-Key-V>	"$this paste; break"
 		bind $editor <Control-Key-X>	"$this cut; break"
 		bind $editor <Control-Key-C>	"$this copy; break"
+		# macOS: explicit Command-key bindings (<<Paste>> etc. may not fire on Aqua)
+		if {${::tcl_platform(os)} eq {Darwin}} {
+			bind $editor <Command-Key-v>	"$this paste; break"
+			bind $editor <Command-Key-x>	"$this cut; break"
+			bind $editor <Command-Key-c>	"$this copy; break"
+			bind $editor <Command-Key-z>	"$this undo; break"
+			bind $editor <Command-Key-Z>	"$this redo; break"
+			bind $editor <Command-Key-a>	"$this select_all; break"
+		}
 		bind $editor <<Undo>>		"$this undo; break"
 		bind $editor <<Redo>>		"$this redo; break"
 		bind $editor <Shift-Return>	"$this shift_enter; break"
@@ -892,7 +901,7 @@ class Editor {
 			$this resetUpDownIndex
 			$this parse \$ln
 			$this manage_autocompletion_list \$ln
-			update
+			update idletasks
 			break"
 		bind $editor <<PasteSelection>> "
 			[bind Text <<PasteSelection>>]
@@ -900,7 +909,7 @@ class Editor {
 			$this recalc_left_frame
 			$this parse \[expr {int(\[$editor index insert\])}\]
 			catch {$editor tag remove sel sel.first sel.last}
-			update
+			update idletasks
 			break"
 		bind $editor <Button-1> "
 			# Check spelling on the line which we are now leaving
@@ -927,7 +936,7 @@ class Editor {
 			pack forget $cmd_line
 			catch {$this cmd_line_menu_close_now}
 			focus $editor
-			update
+			update idletasks
 			break"
 		for {set i 1} {$i < 21} {incr i} {
 			bind $cmd_line <F$i>		{continue}
@@ -1662,7 +1671,7 @@ class Editor {
 			-x -100 -y -25 -relx 0.5 -rely 0.5
 		raise $finishigh_hg_dlg_wdg
 		grab $finishigh_hg_dlg_wdg
-		update
+		update idletasks
 	}
 
 	## Close highlight dialog
@@ -1717,7 +1726,7 @@ class Editor {
 				if {$j > 500} {
 					set j 0
 					incr finishigh_hg_dlg_const
-					update
+					update idletasks
 				}
 			}
 
@@ -2794,7 +2803,7 @@ class Editor {
 		if {![winfo exists $ed_sc_frame]} {return}
 		set top_frame [frame $ed_sc_frame.top_frame_$top_frame_idx -container 1]
 		pack $top_frame -expand 1 -fill both
-		bind $top_frame <Visibility> "update; $this create_terminal {$filename}"
+		bind $top_frame <Visibility> "update idletasks; $this create_terminal {$filename}"
 		bind $top_frame <Destroy> "$this recreate_terminal {$filename}"
 		set terminal_created 0
 		incr top_frame_idx

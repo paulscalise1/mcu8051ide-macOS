@@ -660,9 +660,9 @@ class Notes {
 		wm title $dialog [mc "Enter text"]
 		wm transient $dialog .
 		wm geometry $dialog =250x70+[expr {[winfo screenwidth $win] / 2 - 250}]+[expr {[winfo screenheight $win] / 2 - 70}]
-		update
-		focus -force $entry
-		grab $dialog
+		update idletasks
+		catch {focus -force $entry}
+		catch {grab $dialog}
 		raise $dialog
 		tkwait window $dialog
 

@@ -199,7 +199,8 @@ class Ds1620 {
 	## Value of configuration menu variable "keep_win_on_top" has been changed
 	 # @return void
 	public method keep_win_on_top_changed {} {
-		set keep_win_on_top $Ds1620::menu_keep_win_on_top
+		set keep_win_on_top [expr {!$keep_win_on_top}]
+		set ::${class_name}::menu_keep_win_on_top $keep_win_on_top
 		if {$keep_win_on_top} {
 			wm attributes $win -topmost 1 -alpha 0.8
 		} else {
@@ -274,6 +275,7 @@ class Ds1620 {
 		$canvas_widget create text 85 145	\
 			-text [mc "Note"]		\
 			-font $cb_font			\
+			-fill #000000			\
 			-anchor e
 		$canvas_widget create window 90 145	\
 			-window [ttk::entry $canvas_widget.usr_note	\
@@ -369,6 +371,7 @@ class Ds1620 {
 				[expr {$x_offset + 0}] [expr {$y_offset + ($i * 20)}] \
 				-text $reg_name \
 				-font $cb_font \
+				-fill #000000			\
 				-anchor w
 
 			set sep 0
@@ -405,6 +408,7 @@ class Ds1620 {
 				[expr {$x_offset + 202}] [expr {$y_offset + ($i * 20)}] \
 				-text {°C} \
 				-font $cb_font \
+				-fill #000000			\
 				-anchor w
 		}
 
@@ -415,6 +419,7 @@ class Ds1620 {
 				[expr {$x_offset - 0 + $sep}] [expr {$y_offset + 70}] \
 				-text $bit_name \
 				-font $::Simulator_GUI::bitfont \
+				-fill #000000			\
 				-anchor w
 			]
 
@@ -553,11 +558,13 @@ class Ds1620 {
 			-text {°C} \
 			-font $cb_font \
 			-anchor w \
+			-fill #000000			\
 			-tags temperature_C
 		$canvas_widget create text [expr {$x + 50}] [expr {$y - 8}] \
 			-text {°F} \
 			-font $cb_font \
 			-anchor e \
+			-fill #000000			\
 			-tags temperature_F
 
 
@@ -642,12 +649,14 @@ class Ds1620 {
 			[expr {$y_offset + 5 + 3*25}]	\
 			-text [mc "PORT"]		\
 			-font $cb_font			\
+			-fill #000000			\
 			-anchor e
 		$canvas_widget create text		\
 			[expr {$x_offset + 5}]		\
 			[expr {$y_offset + 5 + 3*25}]	\
 			-text [mc "BIT"]		\
 			-font $cb_font			\
+			-fill #000000			\
 			-anchor w
 
 		$canvas_widget create text		\
@@ -655,12 +664,14 @@ class Ds1620 {
 			[expr {$y_offset + 21}]		\
 			-text [mc "PORT"]		\
 			-font $cb_font			\
+			-fill #000000			\
 			-anchor e
 		$canvas_widget create text		\
 			[expr {$x_offset + 165}]	\
 			[expr {$y_offset + 21}]		\
 			-text [mc "BIT"]		\
 			-font $cb_font			\
+			-fill #000000			\
 			-anchor w
 	}
 
@@ -677,6 +688,7 @@ class Ds1620 {
 			[expr {$x_offset + 42}] [expr {$y_offset + 102}] \
 			-text {DS1620} \
 			-anchor n \
+			-fill #000000			\
 			-font [font create -family $::DEFAULT_FIXED_FONT -size -13]
 
 		set i 0
@@ -689,17 +701,20 @@ class Ds1620 {
 				$canvas_widget create text \
 					[expr {$x_offset + ($x * 70) + 7}] [expr {$y_offset + ($y * 25) + 13}] \
 					-text [lindex {1 2 3 4 8 7 6 5} $i] \
+					-fill #000000			\
 					-font $cb_font
 				$canvas_widget create text \
 					[expr {$x_offset + ($x ? 39 : 10) + 7}] [expr {$y_offset + ($y * 25) + 13}] \
 					-text [lindex {DQ CLK RST GND V T T T} $i] \
 					-font $small_font \
+					-fill #000000			\
 					-anchor w
 				if {$i > 3} {
 					$canvas_widget create text \
 						[expr {$x_offset + 45 + 7}] [expr {$y_offset + ($y * 25) + 18}] \
 						-text [lindex {{} {} {} {} dd high low com} $i] \
 						-font $small_font \
+						-fill #000000			\
 						-anchor w
 				}
 
@@ -887,7 +902,8 @@ class Ds1620 {
 	## Informs the DS1620 simulator about change of _no_delays flag (used by configuration menu)
 	 # @return void
 	public method no_delays_changed {} {
-		set no_delays ${::Ds1620::_no_delays}
+		set no_delays [expr {!$no_delays}]
+		set ::${class_name}::_no_delays $no_delays
 	}
 
 	## Write a message to the log
@@ -1668,7 +1684,7 @@ class Ds1620 {
 			adjust_temp_ind
 			evaluete_enaged_pins
 			$project pale_reevaluate_IO
-			update
+			update idletasks
 
 		# Fail
 		}]} then {

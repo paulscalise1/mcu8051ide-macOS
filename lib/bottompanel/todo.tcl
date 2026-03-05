@@ -233,7 +233,7 @@ class Todo {
 	 # @return void
 	public method TodoTabRaised {} {
 		focus $text_widget
-		after idle "update; catch {$this todo_panel_redraw_pane}"
+		after idle "update idletasks; catch {$this todo_panel_redraw_pane}"
 	}
 
 	## Add file specific notepad for a newly created editor
@@ -297,9 +297,9 @@ class Todo {
 		}
 		set redraw_pane_in_progress 1
 
-		update
+		update idletasks
 		$paned_win sash place 0 [expr {${::WIN_GEOMETRY_width} - $panel_size}] 0
-		update
+		update idletasks
 
 		set redraw_pane_in_progress 0
 	}

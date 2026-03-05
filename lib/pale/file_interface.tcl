@@ -181,7 +181,8 @@ class PaleFileInterface {
 	## Value of configuration menu variable "keep_win_on_top" has been changed
 	 # @return void
 	public method keep_win_on_top_changed {} {
-		set keep_win_on_top $PaleFileInterface::menu_keep_win_on_top
+		set keep_win_on_top [expr {!$keep_win_on_top}]
+		set ::${class_name}::menu_keep_win_on_top $keep_win_on_top
 		if {$keep_win_on_top} {
 			wm attributes $win -topmost 1 -alpha 0.8
 		} else {
@@ -698,7 +699,7 @@ class PaleFileInterface {
 			}
 
 			after 0 [subst {
-				update
+				update idletasks
 				$read_file_entry xview [$read_file_entry index end]
 				$write_file_entry xview [$write_file_entry index end]
 			}]
@@ -733,7 +734,7 @@ class PaleFileInterface {
 			# Adjust internal logic and the rest of PALE
 			evaluete_enaged_pins
 			$project pale_reevaluate_IO
-			update
+			update idletasks
 
 		# Fail
 		}]} then {
@@ -760,7 +761,7 @@ class PaleFileInterface {
 			$read_file_entry insert 0 [lindex $filename 1]
 
 			after 0 [subst {
-				update
+				update idletasks
 				$read_file_entry xview [$read_file_entry index end]
 			}]
 		} else {
@@ -777,7 +778,7 @@ class PaleFileInterface {
 			$write_file_entry delete 0 end
 			$write_file_entry insert 0 $filename
 			after 0 [subst {
-				update
+				update idletasks
 				$write_file_entry xview [$write_file_entry index end]
 			}]
 		} else {

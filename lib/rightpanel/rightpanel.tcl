@@ -2241,9 +2241,9 @@ class RightPanel {
 		}
 		set redraw_pane_in_progress 1
 
-		update
+		update idletasks
 		$parentPane sash place 0 [expr {${::WIN_GEOMETRY_width} - $PanelSize}] 0
-		update
+		update idletasks
 
 		set redraw_pane_in_progress 0
 	}

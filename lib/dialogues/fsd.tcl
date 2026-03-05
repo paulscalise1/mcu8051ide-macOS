@@ -290,7 +290,7 @@ itcl::class KIFSD::FSD {
 		wm geometry $win ${::KIFSD::FSD::config(win_geometry)}
 		wm resizable $win 0 0
 		raise $win
-		update
+		update idletasks
 		if {$option_modal} {
 			catch {
 				grab $win
@@ -1244,7 +1244,8 @@ itcl::class KIFSD::FSD {
 		} else {
 			wm transient $dialog .
 		}
-		grab $dialog
+		update idletasks
+		catch {grab $dialog}
 		raise $dialog
 		tkwait window $dialog
 	}
@@ -1425,7 +1426,7 @@ itcl::class KIFSD::FSD {
 		if {$frac0 == 0 && $frac1 == 1} {
 			if {[winfo ismapped $file_listbox_vscrollbar]} {
 				pack forget $file_listbox_vscrollbar
-				update
+				update idletasks
 			}
 
 		# Show scrollbar
@@ -1434,7 +1435,7 @@ itcl::class KIFSD::FSD {
 				pack $file_listbox_vscrollbar		\
 					-after $file_listbox_frame	\
 					-fill y -expand 1
-				update
+				update idletasks
 			}
 			$file_listbox_vscrollbar set $frac0 $frac1
 		}
@@ -1451,7 +1452,7 @@ itcl::class KIFSD::FSD {
 		if {$frac0 == 0 && $frac1 == 1} {
 			if {[winfo ismapped $file_listbox_hscrollbar]} {
 				pack forget $file_listbox_hscrollbar
-				update
+				update idletasks
 			}
 
 		# Show scrollbar
@@ -1460,7 +1461,7 @@ itcl::class KIFSD::FSD {
 				pack $file_listbox_hscrollbar			\
 					-after $right_top_right_top_frame	\
 					-side bottom -fill x -expand 0
-				update
+				update idletasks
 			}
 			catch {
 				$file_listbox_hscrollbar set $frac0 $frac1
@@ -1858,9 +1859,10 @@ itcl::class KIFSD::FSD {
 			destroy $dialog
 		"
 		wm transient $dialog $win
-		grab $dialog
+		update idletasks
+		catch {grab $dialog}
 		raise $dialog
-		focus -force $mid_frame.name_entry
+		catch {focus -force $mid_frame.name_entry}
 		tkwait window $dialog
 
 		# Return results
@@ -2199,7 +2201,8 @@ itcl::class KIFSD::FSD {
 			grab release $dialog
 			destroy $dialog"
 		wm transient $dialog $win
-		grab $dialog
+		update idletasks
+		catch {grab $dialog}
 		raise $dialog
 		tkwait window $dialog
 	}
@@ -2442,9 +2445,10 @@ itcl::class KIFSD::FSD {
 			destroy $dialog
 		"
 		wm transient $dialog $win
-		grab $dialog
+		update idletasks
+		catch {grab $dialog}
 		raise $dialog
-		focus -force $dialog.entry
+		catch {focus -force $dialog.entry}
 		tkwait window $dialog
 	}
 

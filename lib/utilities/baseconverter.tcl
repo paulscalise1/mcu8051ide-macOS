@@ -134,7 +134,7 @@ class BaseConverter {
 
 		# Adjust flag "Shaded"
 		if {[lindex $conf_list 1]} {
-			update
+			update idletasks
 			$win_obj collapse_expand
 		}
 	}

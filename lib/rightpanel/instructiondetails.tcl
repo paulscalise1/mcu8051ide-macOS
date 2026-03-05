@@ -1162,7 +1162,7 @@ class InstructionDetails {
 
 		# Show the window
 		wm geometry $win "=380x280+$x+$y"
-		update
+		update idletasks
 		catch {
 			grab -global $win
 		}

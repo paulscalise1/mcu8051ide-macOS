@@ -212,7 +212,7 @@ namespace eval IHexTools {
 					if {$abort} {return 0}
 					# Update progress variable and GUI
 					incr progress
-					update
+					update idletasks
 				}
 			}
 		}
@@ -334,7 +334,7 @@ namespace eval IHexTools {
 					if {$abort} {return 0}
 					# Update progress variable and GUI
 					incr progress
-					update
+					update idletasks
 				}
 			}
 		}
@@ -383,7 +383,7 @@ namespace eval IHexTools {
 			if {$update} {
 				# Update progress variable and GUI
 				incr progress
-				update
+				update idletasks
 				# Conditional abort
 				if {$abort} {
 					return {}
@@ -448,7 +448,7 @@ namespace eval IHexTools {
 			if {$update} {
 				# Update progress variable and GUI
 				incr progress
-				update
+				update idletasks
 				# Conditional abort
 				if {$abort} {
 					return {}
