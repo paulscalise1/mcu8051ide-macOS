@@ -475,6 +475,20 @@ private variable spellcheck_lock		0	;# Bool: Inhibit method ``spellcheck_check_a
 	{{Zimbabwe}					ZW	Zimbabwe}
 }
 
+## Check whether some spell checking back-end is available on this system:
+ # either the Hunspell program, or -- on macOS -- the native system spell
+ # checker (NSSpellChecker, accessed via osascript, present on every Mac)
+ # @return Bool - 1 == spell checking is available
+proc spellchecker_available {} {
+	if {${::PROGRAM_AVAILABLE(hunspell)}} {
+		return 1
+	}
+	if {[tk windowingsystem] eq {aqua}} {
+		return 1
+	}
+	return 0
+}
+
 ## Kill spell checker and its support processes
  # @return void
 proc kill_spellchecker_process {} {
@@ -528,8 +542,8 @@ proc restart_spellchecker_process {} {
 ## Start the spell checker (Hunspell) and its support processes
  # @return void
 proc start_spellchecker_process {} {
-	# Abort if either the feature is disabled or the Hunspell is not available
-	if {!${::Editor::spellchecker_enabled} || !${::PROGRAM_AVAILABLE(hunspell)}} {
+	# Abort if either the feature is disabled or no spell checker is available
+	if {!${::Editor::spellchecker_enabled} || ![spellchecker_available]} {
 		return
 	}
 	# This function was not yet ported to MS Windows
@@ -549,9 +563,22 @@ proc start_spellchecker_process {} {
 			set ::Editor::spellchecker_started_flag 1
 		}]
 
-		# Attempt to start the Hunspell process
+		# Determinate which back-end to talk to: the "System" dictionary
+		# (or absence of Hunspell) means the native macOS spell checker,
+		# which is present on every Mac -- no third-party installs needed
+		if {
+			${::Editor::spellchecker_dictionary} eq {System}
+				||
+			!${::PROGRAM_AVAILABLE(hunspell)}
+		} then {
+			set spellchecker_command [list |osascript -l JavaScript "${::LIB_DIRNAME}/editor/macos_native_spell.js"]
+		} else {
+			set spellchecker_command [concat {|hunspell -a -i utf8 -d} [list ${::Editor::spellchecker_dictionary}]]
+		}
+
+		# Attempt to start the spell checker process
 		if {[catch {
-			set ::Editor::spellchecker_channel [open [concat {|hunspell -a -i utf8 -d} [list ${::Editor::spellchecker_dictionary}]] r+]
+			set ::Editor::spellchecker_channel [open $spellchecker_command r+]
 			fconfigure ${::Editor::spellchecker_channel} -blocking 0 -buffering line -encoding utf-8
 			fileevent ${::Editor::spellchecker_channel} readable {::Editor::spellchecker_channel_readable}
 			set ::Editor::spellchecker_process_pid [pid ${::Editor::spellchecker_channel}]
@@ -599,8 +626,8 @@ proc start_spellchecker_process {} {
 ## Wait until the spell checker (Hunspell) and its support processes are started
  # @return void
 proc wait_for_spellchecker_process {} {
-	# Abort if either the feature is disabled or the Hunspell is not available
-	if {!${::Editor::spellchecker_enabled} || !${::PROGRAM_AVAILABLE(hunspell)}} {
+	# Abort if either the feature is disabled or no spell checker is available
+	if {!${::Editor::spellchecker_enabled} || ![spellchecker_available]} {
 		return
 	}
 	# This function was not yet ported to MS Windows
@@ -797,8 +824,8 @@ proc spellchecker_check_word {word {wrong_command {}} {correct_command {}}} {
 ## Refresh list of available spell checker dictionaries (refresh in GUI)
  # @return void
 proc refresh_available_dictionaries {} {
-	# Abort if the Hunspell program is not available
-	if {!${::PROGRAM_AVAILABLE(hunspell)}} {
+	# Abort if no spell checker is available
+	if {![spellchecker_available]} {
 		return
 	}
 	# This function was not yet ported to MS Windows
@@ -843,68 +870,83 @@ proc refresh_available_dictionaries {} {
 
 	## Get list of available Hunspell dictionaries
 	set ::Editor::available_dictionaries [list]
-	 # Start watchdog timer for the Hunspell process
-	set spellchecker_start_timer [after 10000 {
-		catch {
-			close ${::Editor::hunspell_process}
-		}
-	}]
-	if {[catch {
-		# Run Hunspell in a mode in which it prints available dictionaries
-		if {!${::MICROSOFT_WINDOWS}} {
-			set hunspell_process [open {| /bin/sh -c "hunspell -D 2>&1 | awk '{print(\$0)} /^LOADED DICTIONARY/ {exit 0}' || exit 1"} "r"]
+	if {${::PROGRAM_AVAILABLE(hunspell)}} {
+		 # Start watchdog timer for the Hunspell process
+		set spellchecker_start_timer [after 10000 {
+			catch {
+				close ${::Editor::hunspell_process}
+			}
+		}]
+		if {[catch {
+			# Run Hunspell in a mode in which it prints available dictionaries
+			if {!${::MICROSOFT_WINDOWS}} {
+				set hunspell_process [open {| /bin/sh -c "hunspell -D 2>&1 | awk '{print(\$0)} /^LOADED DICTIONARY/ {exit 0}' || exit 1"} "r"]
+			} else {
+				puts stderr "Sorry, this feature is not implemented on MS Windows yet."
+				error "Not available on Windows."
+			}
+
+		}]} then {
+			# Error condition
+			puts stderr "Unable to start the Hunspell process"
+
 		} else {
-			puts stderr "Sorry, this feature is not implemented on MS Windows yet."
-			error "Not available on Windows."
+			# Bool: Accept this line of output from the process
+			set accept_flag 0
+
+			# Read list of dictionaries (file names along with pats)
+			while {![eof $hunspell_process]} {
+				# Read line from the process
+				set line [gets $hunspell_process]
+
+				# Ignore everything besides section ``AVAILABLE DICTIONARIES''
+				if {![string first {AVAILABLE DICTIONARIES} $line]} {
+					set accept_flag 1
+					continue
+				} elseif {![string first {LOADED DICTIONARY:} $line]} {
+					break
+				} elseif {!$accept_flag} {
+					continue
+				}
+
+				# Determinate language code and country code and append it to the
+				#+ list of available dictionaries
+				set line [lindex [split $line [file separator]] end]
+				set line [split $line {_}]
+				if {[lindex $line 0] == {hyph}} {
+					continue
+#	 				set line [lreplace $line 0 0]
+				}
+				if {![string length [lindex $line 0]] || ![string length [lindex $line 1]]} {
+					continue
+				}
+				if {![string is alpha [lindex $line 0]] || ![string is alpha [lindex $line 1]]} {
+					continue
+				}
+				set dictionary [string tolower [lindex $line 0]]_[string toupper [lindex $line 1]]
+				if {[lsearch -ascii -exact ${::Editor::available_dictionaries} $dictionary] == -1} {
+					lappend ::Editor::available_dictionaries $dictionary
+				}
+			}
 		}
 
-	}]} then {
-		# Error condition
-		puts stderr "Unable to start the Hunspell process"
-
-	} else {
-		# Bool: Accept this line of output from the process
-		set accept_flag 0
-
-		# Read list of dictionaries (file names along with pats)
-		while {![eof $hunspell_process]} {
-			# Read line from the process
-			set line [gets $hunspell_process]
-
-			# Ignore everything besides section ``AVAILABLE DICTIONARIES''
-			if {![string first {AVAILABLE DICTIONARIES} $line]} {
-				set accept_flag 1
-				continue
-			} elseif {![string first {LOADED DICTIONARY:} $line]} {
-				break
-			} elseif {!$accept_flag} {
-				continue
-			}
-
-			# Determinate language code and country code and append it to the
-			#+ list of available dictionaries
-			set line [lindex [split $line [file separator]] end]
-			set line [split $line {_}]
-			if {[lindex $line 0] == {hyph}} {
-				continue
-# 				set line [lreplace $line 0 0]
-			}
-			if {![string length [lindex $line 0]] || ![string length [lindex $line 1]]} {
-				continue
-			}
-			if {![string is alpha [lindex $line 0]] || ![string is alpha [lindex $line 1]]} {
-				continue
-			}
-			set dictionary [string tolower [lindex $line 0]]_[string toupper [lindex $line 1]]
-			if {[lsearch -ascii -exact ${::Editor::available_dictionaries} $dictionary] == -1} {
-				lappend ::Editor::available_dictionaries $dictionary
-			}
+		# Cancel the watchdog timer
+		catch {
+			after cancel $spellchecker_start_timer
 		}
 	}
 
-	# Cancel the watchdog timer
-	catch {
-		after cancel $spellchecker_start_timer
+	# macOS: the native system spell checker (NSSpellChecker) is always
+	# available -- offer it as the "System" dictionary, so spell checking
+	# works out of the box without Hunspell or downloaded dictionaries
+	if {[tk windowingsystem] eq {aqua}} {
+		set ::Editor::available_dictionaries \
+			[linsert ${::Editor::available_dictionaries} 0 {System}]
+		$m insert 2 command \
+			-command {::Editor::switch_SC_dictionary {System}} \
+			-label [mc "Use the system spell checker (macOS)"] \
+			-image ::ICONS::flag::empty \
+			-compound left
 	}
 
 	# If there are no dictionaries available to use then abort right away
@@ -922,6 +964,11 @@ proc refresh_available_dictionaries {} {
 	 # }
 	set available_dictionaries_complex [list]
 	foreach dictionary ${::Editor::available_dictionaries} {
+		# The macOS "System" pseudo-dictionary has no language/country
+		# code -- it has its own menu entry created above
+		if {$dictionary eq {System}} {
+			continue
+		}
 		# Determinate language code and country code
 		set dictionary		[split $dictionary {_}]	;# List: Language and country codes, e.g. {en GB}
 		set language_code	[lindex $dictionary 0]	;# String: Language code, e.g. "en"
@@ -1025,8 +1072,8 @@ proc refresh_available_dictionaries {} {
  # @parm String dictionary - Dictionary name like: ``en_GB'' or ``en_AU''
  # @return void
 proc switch_SC_dictionary {dictionary} {
-	# Abort if the Hunspell program is not available
-	if {!${::PROGRAM_AVAILABLE(hunspell)}} {
+	# Abort if no spell checker is available
+	if {![spellchecker_available]} {
 		return
 	}
 
@@ -1075,8 +1122,8 @@ proc switch_SC_dictionary {dictionary} {
 ## Adjust spell checker configuration button to current spell checker configuration
  # @return void
 proc adjust_spell_checker_config_button {} {
-	# Abort if the Hunspell program is not available
-	if {!${::PROGRAM_AVAILABLE(hunspell)}} {
+	# Abort if no spell checker is available
+	if {![spellchecker_available]} {
 		return
 	}
 	# This function was not yet ported to MS Windows
@@ -1125,7 +1172,7 @@ private method spellcheck_change_detected_pre {{line_number {}}} {
 	}
 
 	# Abort conditions
-	if {!$spellchecker_enabled || !${::PROGRAM_AVAILABLE(hunspell)}} {
+	if {!$spellchecker_enabled || ![spellchecker_available]} {
 		return
 	}
 
@@ -1154,7 +1201,7 @@ private method spellcheck_change_detected_post {{line_number {}}} {
 	}
 
 	# Abort conditions
-	if {!$spellchecker_enabled || !${::PROGRAM_AVAILABLE(hunspell)}} {
+	if {!$spellchecker_enabled || ![spellchecker_available]} {
 		return
 	}
 
@@ -1316,7 +1363,7 @@ public method spellcheck_check_all {line_number {force 0}} {
 	}
 
 	# Abort conditions
-	if {($force != 2 && $spellcheck_lock) || !$spellchecker_enabled || !${::PROGRAM_AVAILABLE(hunspell)}} {
+	if {($force != 2 && $spellcheck_lock) || !$spellchecker_enabled || ![spellchecker_available]} {
 		return
 	}
 	if {!$force && ($spellcheck_line_number != $line_number)} {

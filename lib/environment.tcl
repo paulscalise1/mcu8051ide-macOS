@@ -49,7 +49,8 @@ if {![X::restore_session]} {
 }
 
 # Restore spell checker configuration from the last session
-if {${::PROGRAM_AVAILABLE(hunspell)}} {
+# (on macOS the native system spell checker counts as available too)
+if {[::Editor::spellchecker_available]} {
 	set ::Editor::spellchecker_enabled	${::CONFIG(SPELL_CHECK_ENABLED)}
 	set ::Editor::spellchecker_dictionary	${::CONFIG(SPELL_CHECK_DICTIONARY)}
 } else {
@@ -1525,7 +1526,7 @@ proc makeStatusbar {txt} {
 			-image ::ICONS::flag::empty	\
 			-text "none"			\
 		] -in .statusbarF -side left
-		if {${::PROGRAM_AVAILABLE(hunspell)}} {
+		if {[::Editor::spellchecker_available]} {
 			DynamicHelp::add .statusbarSB -text [mc "Configure spell checker"]
 		} else {
 			DynamicHelp::add .statusbarSB -text [mc "Spell checker (hunspell) is not available."]
