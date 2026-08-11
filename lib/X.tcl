@@ -10309,7 +10309,7 @@ namespace eval X {
 					-type ok	\
 					-icon warning	\
 					-title [mc "Unable to find Doxywizard"]	\
-					-message [mc "Unable to find Doxywizard, the graphical front-end of Doxygen.\n\nThe Homebrew doxygen package contains only the command line tool. To get Doxywizard, install the official Doxygen application from https://www.doxygen.nl (it provides Doxywizard.app), then restart MCU 8051 IDE.\n\nNote: building the C API documentation needs only the doxygen command and works without Doxywizard."]
+					-message [mc "Unable to find Doxywizard, the graphical front-end of Doxygen.\n\nTo get Doxywizard, install the official Doxygen application from https://www.doxygen.nl (it provides Doxywizard.app), then restart MCU 8051 IDE.\n\nNote: building the C API documentation needs only the doxygen command and works without Doxywizard."]
 			} else {
 				tk_messageBox		\
 					-parent .	\
