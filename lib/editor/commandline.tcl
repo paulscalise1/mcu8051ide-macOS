@@ -1073,6 +1073,9 @@ private method cmd_line_menu_postdown {commands} {
 		if {[winfo exists $cmd_line_listbox.c]} {
 			bind $cmd_line_listbox.c <Button-5>	{%W yview scroll +5 units; break}
 			bind $cmd_line_listbox.c <Button-4>	{%W yview scroll -5 units; break}
+			if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+				bind $cmd_line_listbox.c <MouseWheel> {%W yview scroll [expr {-(%D)}] units; break}
+			}
 		}
 		bind $cmd_line_listbox <Key-Escape> "$this cmd_line_menu_close_now"
 		bind $cmd_line_listbox <Key-Return>	\

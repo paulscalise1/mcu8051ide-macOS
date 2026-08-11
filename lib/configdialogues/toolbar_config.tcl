@@ -146,6 +146,9 @@ namespace eval toolbar {
 		if {[winfo exists $options_ListBox.c]} {
 			bind $options_ListBox.c <Button-5> {%W yview scroll +5 units; break}
 			bind $options_ListBox.c <Button-4> {%W yview scroll -5 units; break}
+			if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+				bind $options_ListBox.c <MouseWheel> {%W yview scroll [expr {-(%D)}] units; break}
+			}
 		}
 		pack $options_ListBox -fill both -expand 1 -side left
 		pack [ttk::scrollbar $listbox_frame.options_scrollbar	\
@@ -191,6 +194,9 @@ namespace eval toolbar {
 		if {[winfo exists $current_ListBox.c]} {
 			bind $current_ListBox.c <Button-5> {%W yview scroll +5 units; break}
 			bind $current_ListBox.c <Button-4> {%W yview scroll -5 units; break}
+			if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+				bind $current_ListBox.c <MouseWheel> {%W yview scroll [expr {-(%D)}] units; break}
+			}
 		}
 		pack $current_ListBox -fill both -expand 1 -side left
 		pack [ttk::scrollbar $listbox_frame.current_scrollbar	\

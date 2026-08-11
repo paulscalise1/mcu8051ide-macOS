@@ -39,7 +39,7 @@ class Calculator {
 	public common calc_count	0	;# counter of instances
 	# Font for numerical keypad
 	public common large_font	[font create			\
-		-family {helveticat}				\
+		-family {helvetica}				\
 		-size [expr {int(-12 * $::font_size_factor)}]	\
 		-weight {bold}					\
 	]

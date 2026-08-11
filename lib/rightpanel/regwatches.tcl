@@ -1112,6 +1112,9 @@ class RegWatches {
 		bind $entry <Enter>		"$this create_help_window_ram ${addr}h; help_window_variable_addr"
 		bind $entry <Button-4>		"$watch_text yview scroll -5 units"
 		bind $entry <Button-5>		"$watch_text yview scroll +5 units"
+		if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+			bind $entry <MouseWheel>	"$watch_text yview scroll \[expr {-(%D)}\] units"
+		}
 		watch_entry_shortcuts_reset $entry
 
 		# Return entry reference

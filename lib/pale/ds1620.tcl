@@ -572,6 +572,14 @@ class Ds1620 {
 		$canvas_widget bind temperature_indicator <Button-5> [list $this temp_ind_event 5]
 		$canvas_widget bind temperature_indicator <Button-4> [list $this temp_ind_event 4]
 		$canvas_widget bind temperature_indicator <B1-Motion> [list $this temp_ind_event 1 %y]
+		if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+			# Widget-level binding with a hit test -- canvas item bindings
+			# are not reliable for <MouseWheel> events
+			bind $canvas_widget <MouseWheel> "
+				if {\[lsearch \[$canvas_widget gettags current\] {temperature_indicator}\] != -1} {
+					if {%D > 0} {$this temp_ind_event 4} elseif {%D < 0} {$this temp_ind_event 5}
+				}"
+		}
 	}
 
 	private method adjust_temp_ind {} {

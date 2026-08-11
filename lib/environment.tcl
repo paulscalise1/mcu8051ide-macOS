@@ -2773,6 +2773,12 @@ proc mainmenu_redraw {} {
 		.mainMenu.tools delete [::mc "Custom command 2"]
 		.mainMenu.tools delete [::mc "Run doxywizard"]
 		.mainMenu.tools delete [::mc "Clear C API documentation"]
+	} elseif {${::tcl_platform(os)} eq {Darwin}} {
+		# The embedded terminal emulator (urxvt/XEMBED) cannot work on
+		# macOS, so its configuration dialog would configure a dead feature
+		catch {
+			.mainMenu.configure delete [::mc "Configure terminal emulator"]
+		}
 	}
 
 	# Disable menu items which are not available when external editor used

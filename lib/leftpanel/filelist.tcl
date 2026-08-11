@@ -725,6 +725,9 @@ class FileList {
 
 		# Set bindings for file lists
 		$listbox_opened_files bindText <ButtonRelease-3>	"$this fileList_opened_filelist_item_popup %X %Y"
+		if {[tk windowingsystem] eq {aqua}} { ;# Aqua: the right mouse button is button 2
+			$listbox_opened_files bindText <ButtonRelease-2> "$this fileList_opened_filelist_item_popup %X %Y"
+		}
 		$listbox_opened_files bindText <Enter>			"$this file_details_win_create O"
 		$listbox_opened_files bindText <Leave>			"$this file_details_win_hide"
 		$listbox_opened_files bindText <Motion>			"$this file_details_win_move"
@@ -732,6 +735,9 @@ class FileList {
 		if {[winfo exists $listbox_opened_files.c]} {
 			bind $listbox_opened_files.c <Button-5>		{%W yview scroll +5 units; break}
 			bind $listbox_opened_files.c <Button-4>		{%W yview scroll -5 units; break}
+			if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+				bind $listbox_opened_files.c <MouseWheel> {%W yview scroll [expr {-(%D)}] units; break}
+			}
 			bind $listbox_opened_files.c <ButtonRelease-3>	"$this fileList_opened_filelist_popup %X %Y"
 		}
 
@@ -741,6 +747,9 @@ class FileList {
 		bindtags $listbox_opened_files_bm $listbox_opened_files_bm
 
 		$listbox_project_files bindText <ButtonRelease-3>	"$this fileList_project_filelist_item_popup %X %Y"
+		if {[tk windowingsystem] eq {aqua}} { ;# Aqua: the right mouse button is button 2
+			$listbox_project_files bindText <ButtonRelease-2> "$this fileList_project_filelist_item_popup %X %Y"
+		}
 		$listbox_project_files bindText <Double-Button-1>	"$this filelist_project_file_open"
 		$listbox_project_files bindText <Enter>			"$this file_details_win_create P"
 		$listbox_project_files bindText <Leave>			"$this file_details_win_hide"
@@ -749,6 +758,9 @@ class FileList {
 		if {[winfo exists $listbox_project_files.c]} {
 			bind $listbox_project_files.c <Button-5>	{%W yview scroll +5 units; break}
 			bind $listbox_project_files.c <Button-4>	{%W yview scroll -5 units; break}
+			if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+				bind $listbox_project_files.c <MouseWheel> {%W yview scroll [expr {-(%D)}] units; break}
+			}
 			bind $listbox_project_files.c <ButtonRelease-3>	"$this fileList_project_filelist_popup %X %Y"
 		}
 

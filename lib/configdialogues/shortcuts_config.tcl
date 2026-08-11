@@ -204,6 +204,9 @@ namespace eval shortcuts {
 		pack $treeWidget -fill both -expand 1 -side left
 		bind $treeWidget <Button-5> {%W yview scroll +5 units; break}
 		bind $treeWidget <Button-4> {%W yview scroll -5 units; break}
+		if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+			bind $treeWidget.c <MouseWheel> {%W yview scroll [expr {-(%D)}] units; break}
+		}
 
 		# Create scrollbar for the tree widget
 		pack [ttk::scrollbar $tree_frame.scrollbar	\

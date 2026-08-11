@@ -402,6 +402,9 @@ class VirtualHWComponent {
 			]
 			bind $cw <Button-5> "$text_widget yview scroll +5 units; break"
 			bind $cw <Button-4> "$text_widget yview scroll -5 units; break"
+			if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+				bind $cw <MouseWheel> "$text_widget yview scroll \[expr {-(%D)}\] units; break"
+			}
 			 # Fill in the canvas widget
 			$project Graph_create_legend $cw 1
 			 # Show the canvas widget

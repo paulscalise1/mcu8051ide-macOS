@@ -340,6 +340,9 @@ namespace eval SelectMCU {
 		if {[winfo exists $listbox_widget.c]} {
 			bind $listbox_widget.c <Button-5>		{%W yview scroll +5 units; break}
 			bind $listbox_widget.c <Button-4>		{%W yview scroll -5 units; break}
+			if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+				bind $listbox_widget.c <MouseWheel>	{%W yview scroll [expr {-(%D)}] units; break}
+			}
 		}
 		bind $listbox_widget		<<ListboxSelect>>	{::SelectMCU::select_item}
 		$listbox_widget bindImage	<Double-1>		{::SelectMCU::close_window;#}

@@ -369,6 +369,9 @@ private method invoke_completion_popup_window {mode start_idx end_idx} {
 		if {[winfo exists $listbox.c]} {
 			bind $listbox.c <Button-5>	{%W yview scroll +1 units; break}
 			bind $listbox.c <Button-4>	{%W yview scroll -1 units; break}
+			if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+				bind $listbox.c <MouseWheel> {%W yview scroll [expr {-(%D)}] units; break}
+			}
 		}
 	}
 	set listbox ".completion_win.frame.listbox"

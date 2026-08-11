@@ -548,6 +548,11 @@ class Editor {
 		bind $top_frame.f <Button-1> "$this click_under_editor %x %y; break"
 		bind $top_frame.f <Button-4> "$this scroll scroll -3 units; break"
 		bind $top_frame.f <Button-5> "$this scroll scroll +3 units; break"
+		if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+			# Scroll the editor itself; line numbers and icon border are
+			# kept in sync by its -yscrollcommand (scrollSet)
+			bind $top_frame.f <MouseWheel> "$editor yview scroll \[expr {-15 * (%D)}\] pixels; break"
+		}
 		# Create scrollbar
 		set scrollbar [ttk::scrollbar		\
 			$top_frame.editor_scrollbar	\
@@ -753,9 +758,13 @@ class Editor {
 		bind $editor <Control-Key>	{continue}
 		bind $editor <Alt-Key>		{continue}
 		 # Keep default
+		 # (On Aqua the Shift/Option MouseWheel variants provide horizontal
+		 # and accelerated scrolling; on X11 they have no effect.)
 		foreach key {
 				<ButtonRelease-1>	<B1-Enter>	<B1-Leave>
 				<B2-Motion>		<MouseWheel>
+				<Shift-MouseWheel>	<Option-MouseWheel>
+				<Shift-Option-MouseWheel>
 			} {
 				bind $editor $key [bind Text $key]
 		}
@@ -988,6 +997,9 @@ class Editor {
 			break"
 		bind $lineNumbers <Button-4> "$this scroll scroll -20 units; break"
 		bind $lineNumbers <Button-5> "$this scroll scroll +20 units; break"
+		if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+			bind $lineNumbers <MouseWheel> "$editor yview scroll \[expr {-15 * (%D)}\] pixels; break"
+		}
 		bindtags $lineNumbers [list $lineNumbers . all]
 
 		# Set event bindings for "Icon border"
@@ -1003,6 +1015,9 @@ class Editor {
 			break"
 		bind $iconBorder <Button-4> "$this scroll scroll -20 units; break"
 		bind $iconBorder <Button-5> "$this scroll scroll +20 units; break"
+		if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+			bind $iconBorder <MouseWheel> "$editor yview scroll \[expr {-15 * (%D)}\] pixels; break"
+		}
 		bindtags $iconBorder [list $iconBorder . all]
 
 		# Finalize initialization

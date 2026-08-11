@@ -872,7 +872,7 @@ namespace eval compiler {
 		grid [text $main_frame.notes					\
 			-bg ${::COMMON_BG_COLOR} -bd 0 -highlightthickness 0 -wrap word	\
 			-font [font create					\
-				-family {helvetiva}				\
+				-family {helvetica}				\
 				-size [expr {int(-12 * $::font_size_factor)}]	\
 			]							\
 		] -row $row -column 0 -sticky we -columnspan 2 -padx 10

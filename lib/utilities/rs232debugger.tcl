@@ -883,10 +883,20 @@ class RS232Debugger {
 	 # @return void
 	public method port_combobox_refresh {} {
 		if {!$::MICROSOFT_WINDOWS} { ;# POSIX way
-			$port_combobox configure -values \
-				[lsort -decreasing \
-					[glob -directory {/dev} -nocomplain -type {c} -- {tty{S,USB}*}] \
-				]
+			if {${::tcl_platform(os)} eq {Darwin}} {
+				# macOS: serial devices appear as /dev/cu.* (call-out) and
+				# /dev/tty.* (dial-in).  Offer the cu.* devices, which do
+				# not block while waiting for a carrier signal.
+				$port_combobox configure -values \
+					[lsort -decreasing \
+						[glob -directory {/dev} -nocomplain -type {c} -- {cu.*}] \
+					]
+			} else {
+				$port_combobox configure -values \
+					[lsort -decreasing \
+						[glob -directory {/dev} -nocomplain -type {c} -- {tty{S,USB}*}] \
+					]
+			}
 
 		} else { ;# Microsoft Widnows way
 			set available_ms_windows_ports [list]

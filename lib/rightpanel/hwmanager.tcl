@@ -36,12 +36,13 @@ set _HWMANAGER_TCL _
 
 class HwManager {
 	## COMMON
-	public common PLUGIN_SEARCH_PATHS {
-		/usr/share/mcu8051ide/hwplugins
-		/usr/local/share/mcu8051ide/hwplugins
-	}
+	public common PLUGIN_SEARCH_PATHS [list \
+		/usr/share/mcu8051ide/hwplugins \
+		/usr/local/share/mcu8051ide/hwplugins \
+		${::INSTALLATION_DIR}/hwplugins \
+	]
 	if {$::MICROSOFT_WINDOWS} {
-		set PLUGIN_SEARCH_PATHS ${::INSTALLATION_DIR}/hwplugins
+		set PLUGIN_SEARCH_PATHS [list ${::INSTALLATION_DIR}/hwplugins]
 	}
 	public common inst_plg_count			0	;# Int: Number of installed plugins
 

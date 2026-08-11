@@ -69,6 +69,7 @@ set _SPELL_CHECK_TCL _
 	public common spellchecker_start_timer			{}	;# AfterTimer: Watch dog timer for start of of the spell checker process
 	public common available_dictionaries			[list]	;# List of Strings: Dictionaries available to the Hunspell
 	public common hunspell_process				{}	;# Channel: Hunspell process invoked by command open in order to gain list of dictionaries
+	public common spellchecker_channel			{}	;# Channel: Bidirectional pipe to the Hunspell process (macOS only, where Tk 'send' is unavailable)
 
 ## PRIVATE
 private variable spellcheck_line_pre		{}	;# String: Content of the line where change_detected_pre was performed
@@ -481,6 +482,13 @@ proc kill_spellchecker_process {} {
 	set ::Editor::spellchecker_RAP_ID {}
 	set ::Editor::spellchecker_command_LIFO [list]
 
+	# macOS: the spell checker runs as a direct bidirectional pipe
+	if {${::Editor::spellchecker_channel} != {}} {
+		catch {fileevent ${::Editor::spellchecker_channel} readable {}}
+		catch {close ${::Editor::spellchecker_channel}}
+		set ::Editor::spellchecker_channel {}
+	}
+
 	# Abort if the spell checker process is not running
 	if {${::Editor::spellchecker_process_pid} == {}} {
 		return
@@ -528,12 +536,34 @@ proc start_spellchecker_process {} {
 	if {$::MICROSOFT_WINDOWS} {
 		return
 	}
-	# macOS: the spell checker pipeline uses receive_and_print.tcl and
-	# external_command.tcl, both of which rely on Tk's 'send' for IPC.
-	# 'send' is X11-only and fails silently on Aqua.  Disable until rewritten.
+	# macOS: the original 3-process pipeline (receive_and_print | hunspell |
+	# external_command) relies on Tk's 'send' for IPC, which is X11-only.
+	# Open the Hunspell directly as a bidirectional pipe instead; responses
+	# are handled by the very same spellchecker_receive_response, because the
+	# ispell pipe protocol is identical (banner "@(#)..." on start-up, then
+	# one result line per word).
 	if {[tk windowingsystem] eq {aqua}} {
-		set ::Editor::spellchecker_start_failed 1
-		set ::Editor::spellchecker_started_flag 1
+		# Start watch dog timer
+		set ::Editor::spellchecker_start_timer [after 10000 {
+			set ::Editor::spellchecker_start_failed 1
+			set ::Editor::spellchecker_started_flag 1
+		}]
+
+		# Attempt to start the Hunspell process
+		if {[catch {
+			set ::Editor::spellchecker_channel [open [concat {|hunspell -a -i utf8 -d} [list ${::Editor::spellchecker_dictionary}]] r+]
+			fconfigure ${::Editor::spellchecker_channel} -blocking 0 -buffering line -encoding utf-8
+			fileevent ${::Editor::spellchecker_channel} readable {::Editor::spellchecker_channel_readable}
+			set ::Editor::spellchecker_process_pid [pid ${::Editor::spellchecker_channel}]
+			# NOTE: spellchecker_RAP_ID (the "ready" gate used by
+			# spellchecker_check_word) is set by the response handler once
+			# the Hunspell start-up banner arrives -- exactly like the
+			# 'send' based pipeline sets it only after its handshake.
+		}]} then {
+			# FAILURE
+			set ::Editor::spellchecker_start_failed 1
+			set ::Editor::spellchecker_started_flag 1
+		}
 		return
 	}
 
@@ -663,6 +693,16 @@ proc spellchecker_receive_response {args} {
 	# Handle the initial response (sent once the Hunspell is started)
 	if {[lindex $response 0] == {@(#)}} {
 		set spellchecker_command_LIFO [list]
+		# macOS pipe mode: the banner is the handshake -- the channel now
+		# takes over the role of the RAP ID ("spell checker is ready")
+		if {${::Editor::spellchecker_channel} != {}} {
+			set ::Editor::spellchecker_RAP_ID ${::Editor::spellchecker_channel}
+		}
+		# The spell checker started successfully -- stop the watch dog
+		# timer so that it cannot flag a failure after an automatic
+		# restart (where wait_for_spellchecker_process does not run)
+		catch {after cancel ${::Editor::spellchecker_start_timer}}
+		set ::Editor::spellchecker_start_failed 0
 		set ::Editor::spellchecker_started_flag 1
 		return
 	}
@@ -686,6 +726,34 @@ proc spellchecker_receive_response {args} {
 	}
 }
 
+## macOS: handle output of the Hunspell process connected via bidirectional pipe
+ # Reads complete lines from the pipe and passes them to
+ # spellchecker_receive_response, which implements the ispell pipe protocol.
+ # @return void
+proc spellchecker_channel_readable {} {
+	set channel ${::Editor::spellchecker_channel}
+	if {$channel == {}} {
+		return
+	}
+
+	# Process termination
+	if {[eof $channel]} {
+		catch {fileevent $channel readable {}}
+		catch {close $channel}
+		set ::Editor::spellchecker_channel {}
+		set ::Editor::spellchecker_process_pid {}
+		spellchecker_exit_callback
+		return
+	}
+
+	# Read all complete lines available at the moment.  The response proc
+	# expects the whole line as its first argument (same as the 'send' path
+	# delivers it).
+	while {[gets $channel line] >= 0} {
+		spellchecker_receive_response $line
+	}
+}
+
 ## Send a word to the Hunspell process for evaluation
  # @parm String word			- Work to check for correct spelling
  # @parm String wrong_command = {}	- Command to execute here if the word is badly spelled
@@ -706,7 +774,10 @@ proc spellchecker_check_word {word {wrong_command {}} {correct_command {}}} {
 	lappend spellchecker_command_LIFO [list $correct_command $wrong_command]
 
 	# Send the word to the Hunspell process
-	if {!${::MICROSOFT_WINDOWS}} {
+	if {${::Editor::spellchecker_channel} != {}} {
+		# macOS: write directly to the bidirectional pipe
+		catch {puts ${::Editor::spellchecker_channel} $word}
+	} elseif {!${::MICROSOFT_WINDOWS}} {
 		::X::secure_send ${::Editor::spellchecker_RAP_ID} print_line "{$word}"
 	} else {
 		dde eval ${::Editor::spellchecker_RAP_ID} print_line "{$word}"

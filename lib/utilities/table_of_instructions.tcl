@@ -174,6 +174,9 @@ class TableOfInstructions {
 		set matrix_frame [$scrollable_frame getframe]
 		bind $matrix_frame <Button-5> "$scrollable_frame yview scroll +1 units; break"
 		bind $matrix_frame <Button-4> "$scrollable_frame yview scroll -1 units; break"
+		if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+			bind $matrix_frame <MouseWheel> "$scrollable_frame yview scroll \[expr {-(%D)}\] units; break"
+		}
 		set vertical_scrollbar [ttk::scrollbar $main_frame.vertical_scrollbar	\
 			-orient vertical -command "$main_frame.scrollable_frame yview"	\
 		]
@@ -263,6 +266,9 @@ class TableOfInstructions {
 
 					bind $wdg <Button-5> "$scrollable_frame yview scroll +1 units; break"
 					bind $wdg <Button-4> "$scrollable_frame yview scroll -1 units; break"
+					if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+						bind $wdg <MouseWheel> "$scrollable_frame yview scroll \[expr {-(%D)}\] units; break"
+					}
 				}
 
 				if {$address < 255} {

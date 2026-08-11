@@ -906,6 +906,9 @@ class CVarsView {
 		bind $entry <FocusIn>		"%W configure -fg ${::Simulator::normal_color}"
 		bind $entry <Button-4>		"$target_widget yview scroll -5 units"
 		bind $entry <Button-5>		"$target_widget yview scroll +5 units"
+		if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+			bind $entry <MouseWheel>	"$target_widget yview scroll \[expr {-(%D)}\] units"
+		}
 
 		# Return entry reference
 		return $entry

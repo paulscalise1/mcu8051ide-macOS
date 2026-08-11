@@ -1159,10 +1159,16 @@ class InterruptMonitor {
 		if {$also_this} {
 			bind $this_frame <Button-5> "$scrollable_frame yview scroll +1 units"
 			bind $this_frame <Button-4> "$scrollable_frame yview scroll -1 units"
+			if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+				bind $this_frame <MouseWheel> "$scrollable_frame yview scroll \[expr {-(%D)}\] units"
+			}
 		}
 		foreach w [winfo children $this_frame] {
 			bind $w <Button-5> "$scrollable_frame yview scroll +1 units"
 			bind $w <Button-4> "$scrollable_frame yview scroll -1 units"
+			if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+				bind $w <MouseWheel> "$scrollable_frame yview scroll \[expr {-(%D)}\] units"
+			}
 			scrolling_bindings $scrollable_frame $w 0
 		}
 	}

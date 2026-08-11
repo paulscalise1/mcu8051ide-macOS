@@ -335,12 +335,19 @@ itcl::class KIFSD::FSD {
 		refresh_quick_access_bar
 		$quick_access_bar bindText	<ButtonRelease-3>	[list $this quick_access_bar_item_menu %X %Y	]
 		$quick_access_bar bindImage	<ButtonRelease-3>	[list $this quick_access_bar_item_menu %X %Y	]
+		if {[tk windowingsystem] eq {aqua}} { ;# Aqua: the right mouse button is button 2
+			$quick_access_bar bindText	<ButtonRelease-2>	[list $this quick_access_bar_item_menu %X %Y	]
+			$quick_access_bar bindImage	<ButtonRelease-2>	[list $this quick_access_bar_item_menu %X %Y	]
+		}
 		$quick_access_bar bindText	<Double-Button-1>	[list $this quick_access_bar_doubleclick	]
 		$quick_access_bar bindImage	<Double-Button-1>	[list $this quick_access_bar_doubleclick	]
 		bind $quick_access_bar		<<ListboxSelect>>	[list $this quick_access_bar_select		]
 		if {[winfo exists $quick_access_bar.c]} {
 			bind $quick_access_bar.c <Button-5>		{%W yview scroll +5 units; break}
 			bind $quick_access_bar.c <Button-4>		{%W yview scroll -5 units; break}
+			if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+				bind $quick_access_bar.c <MouseWheel>	{%W yview scroll [expr {-(%D)}] units; break}
+			}
 			bind $quick_access_bar.c <ButtonRelease-3>	[list $this quick_access_bar_menu %X %Y		]
 		}
 		pack $quick_access_bar -fill both -expand 1
@@ -370,10 +377,17 @@ itcl::class KIFSD::FSD {
 			$dir_listbox bindImage	<Double-Button-1>	[list $this dir_listbox_doubleclick	]
 			$dir_listbox bindText	<ButtonRelease-3>	[list $this dir_listbox_item_menu %X %Y	]
 			$dir_listbox bindImage	<ButtonRelease-3>	[list $this dir_listbox_item_menu %X %Y	]
+			if {[tk windowingsystem] eq {aqua}} { ;# Aqua: the right mouse button is button 2
+				$dir_listbox bindText	<ButtonRelease-2>	[list $this dir_listbox_item_menu %X %Y	]
+				$dir_listbox bindImage	<ButtonRelease-2>	[list $this dir_listbox_item_menu %X %Y	]
+			}
 			bind $dir_listbox	<<ListboxSelect>>	[list $this dir_listbox_select		]
 			if {[winfo exists $dir_listbox.c]} {
 				bind $dir_listbox.c <Button-5>		{%W yview scroll +5 units; break}
 				bind $dir_listbox.c <Button-4>		{%W yview scroll -5 units; break}
+				if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+					bind $dir_listbox.c <MouseWheel>	{%W yview scroll [expr {-(%D)}] units; break}
+				}
 				bind $dir_listbox.c <ButtonRelease-3>	[list $this dir_listbox_menu %X %Y	]
 			}
 			pack $dir_listbox -side left -fill both -expand 1
@@ -439,10 +453,17 @@ itcl::class KIFSD::FSD {
 		$file_listbox bindImage <Double-Button-1>	[list $this file_listbox_doubleclick]
 		$file_listbox bindText <ButtonRelease-3>	[list $this file_listbox_item_menu %X %Y]
 		$file_listbox bindImage <ButtonRelease-3>	[list $this file_listbox_item_menu %X %Y]
+		if {[tk windowingsystem] eq {aqua}} { ;# Aqua: the right mouse button is button 2
+			$file_listbox bindText <ButtonRelease-2>	[list $this file_listbox_item_menu %X %Y]
+			$file_listbox bindImage <ButtonRelease-2>	[list $this file_listbox_item_menu %X %Y]
+		}
 		bind $file_listbox <<ListboxSelect>>		[list $this file_listbox_select]
 		if {[winfo exists $file_listbox.c]} {
 			bind $file_listbox.c <Button-5>		[list $this file_listbox_scroll +5 units]
 			bind $file_listbox.c <Button-4>		[list $this file_listbox_scroll -5 units]
+			if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+				bind $file_listbox.c <MouseWheel>	"$this file_listbox_scroll \[expr {-(%D)}\] units"
+			}
 			bind $file_listbox.c <ButtonRelease-3>	[list $this file_listbox_menu %X %Y]
 		}
 		pack $file_listbox_frame -fill both -expand 1 -side left
@@ -2805,6 +2826,24 @@ itcl::class KIFSD::FSD {
 			puts stderr "KI File Selection Dialog: Unable to load the given configuration string -- using default"
 			return 0
 		} else {
+			# macOS: migrate the Linux-only "Removable media -> /media"
+			# quick access entry possibly restored from an older configuration
+			if {${::tcl_platform(os)} eq {Darwin}} {
+				catch {
+					set qa_data [list]
+					set qa_changed 0
+					foreach item ${::KIFSD::FSD::config(quick_access_bar_data)} {
+						if {[lindex $item 2] eq {/media}} {
+							set item [list [lindex $item 0] {Volumes} {/Volumes}]
+							set qa_changed 1
+						}
+						lappend qa_data $item
+					}
+					if {$qa_changed} {
+						set ::KIFSD::FSD::config(quick_access_bar_data) $qa_data
+					}
+				}
+			}
 			return 1
 		}
 	}
@@ -2863,6 +2902,14 @@ if {$::MICROSOFT_WINDOWS} {
 	set KIFSD::FSD::config(quick_access_bar_data) [subst {
 		{0	{System Drive ${::env(SystemDrive)}}	{${::env(SystemDrive)}}}
 		{1	{Documents and Settings}		{${::env(USERPROFILE)}}}
+	}]
+} elseif {${::tcl_platform(os)} eq {Darwin}} {
+	# macOS: removable media and other volumes are mounted under /Volumes
+	set KIFSD::FSD::config(quick_access_bar_data) [subst {
+		{0	{/}			{/}}
+		{0	{Volumes}		{/Volumes}}
+		{1	{Home}			{~}}
+		{2	{Desktop}		{[KIFSD::FSD::get_desktop_dir]}}
 	}]
 } else {
 	set KIFSD::FSD::config(quick_access_bar_data) [subst {

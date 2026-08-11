@@ -208,6 +208,9 @@ class FSBrowser {
 		if {[winfo exists $fs_browser_listbox.c]} {
 			bind $fs_browser_listbox.c <Button-5>		{%W yview scroll +5 units; break}
 			bind $fs_browser_listbox.c <Button-4>		{%W yview scroll -5 units; break}
+			if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+				bind $fs_browser_listbox.c <MouseWheel>	{%W yview scroll [expr {-(%D)}] units; break}
+			}
 			bind $fs_browser_listbox.c <ButtonRelease-3>	\
 				[list $this filelist_fsb_popup_listbox_menu %X %Y]
 		}
@@ -216,6 +219,12 @@ class FSBrowser {
 			[list $this filelist_fsb_popup_listbox_item_menu %X %Y]
 		$fs_browser_listbox bindImage	<ButtonRelease-3>	\
 			[list $this filelist_fsb_popup_listbox_item_menu %X %Y]
+		if {[tk windowingsystem] eq {aqua}} { ;# Aqua: the right mouse button is button 2
+			$fs_browser_listbox bindText	<ButtonRelease-2>	\
+				[list $this filelist_fsb_popup_listbox_item_menu %X %Y]
+			$fs_browser_listbox bindImage	<ButtonRelease-2>	\
+				[list $this filelist_fsb_popup_listbox_item_menu %X %Y]
+		}
 
 		# Scrollbars
 		set fs_browser_listbox_v_scrollbar [ttk::scrollbar		\

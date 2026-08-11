@@ -258,7 +258,14 @@ update idletasks
 # Determinate default Fixed font
 set ::DEFAULT_FIXED_FONT {Courier}
 if {!$::MICROSOFT_WINDOWS} {
-	if {[lsearch -ascii -exact [font families] {DejaVu Sans Mono}] != -1} {
+	if {
+		${::tcl_platform(os)} eq {Darwin}
+			&&
+		[lsearch -ascii -exact [font families] {Menlo}] != -1
+	} then {
+		# Native monospaced font on macOS
+		set ::DEFAULT_FIXED_FONT {Menlo}
+	} elseif {[lsearch -ascii -exact [font families] {DejaVu Sans Mono}] != -1} {
 		set ::DEFAULT_FIXED_FONT {DejaVu Sans Mono}
 	}
 }
@@ -295,14 +302,48 @@ proc mcu8051ide_bind args {
 		return [original_command_bind $widget $event_str]
 	}
 
-	# MS Windows and macOS don't recognize ISO and XFree86 (X11-only) codes
+	# MS Windows and macOS don't recognize ISO and XFree86 (X11-only) codes.
+	# On macOS the common ones have direct equivalents (X11 reports Shift+F<N>
+	# as XF86_Switch_VT_<N> and Shift+Tab as ISO_Left_Tab), so translate them
+	# instead of dropping the binding; anything else is still dropped.
 	if {$::MICROSOFT_WINDOWS || ${::tcl_platform(os)} eq {Darwin}} {
+		if {${::tcl_platform(os)} eq {Darwin}} {
+			if {[regexp {XF86_Switch_VT_(\d+)} $event_str -> vt_num]} {
+				regsub {(Key-)?XF86_Switch_VT_\d+} $event_str "Key-F$vt_num" event_str
+				if {[string first {Shift} $event_str] == -1} {
+					set event_str "<Shift-[string range $event_str 1 end]"
+				}
+			}
+			if {[string first {ISO_Left_Tab} $event_str] != -1} {
+				regsub {(Key-)?ISO_Left_Tab} $event_str {Key-Tab} event_str
+				if {[string first {Shift} $event_str] == -1} {
+					set event_str "<Shift-[string range $event_str 1 end]"
+				}
+			}
+		}
 		if {
 			[string first {ISO} $event_str] != -1	||
 			[string first {XF86} $event_str] != -1
 		} then {
 			return
 		}
+	}
+
+	# Tk on macOS (Aqua, Tk 8.6) numbers mouse buttons differently from X11:
+	# the right button is 2 and the middle button is 3.  This code base uses
+	# X11 numbering (3 = right/context menu, 2 = middle/paste), so swap the
+	# two buttons in every binding registered on macOS.
+	if {${::tcl_platform(os)} eq {Darwin}} {
+		set event_str [string map {
+			ButtonRelease-2	ButtonRelease-3
+			ButtonRelease-3	ButtonRelease-2
+			ButtonPress-2	ButtonPress-3
+			ButtonPress-3	ButtonPress-2
+			Button-2	Button-3
+			Button-3	Button-2
+			B2-Motion	B3-Motion
+			B3-Motion	B2-Motion
+		} $event_str]
 	}
 
 	if {
@@ -711,6 +752,13 @@ foreach program {
 		} else {
 			set ::PROGRAM_AVAILABLE($program) 1
 		}
+}
+# macOS: urxvt embeds itself via XEMBED into an X11 window id, which cannot
+# work inside a Tk/Aqua window.  Treat it as unavailable even when installed
+# (e.g. via Homebrew + XQuartz) so every terminal-embedding feature degrades
+# the same way it does on a Linux system without urxvt.
+if {${::tcl_platform(os)} eq {Darwin}} {
+	set ::PROGRAM_AVAILABLE(urxvt) 0
 }
 time_in_msec	;# Print time info
 

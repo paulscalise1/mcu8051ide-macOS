@@ -148,6 +148,9 @@ class SFRWatches {
 		bind $entry <Key-Prior>	"$this sfr_watches_up $type 4"
 		bind $entry <Button-4>	"$text_widget yview scroll -5 units"
 		bind $entry <Button-5>	"$text_widget yview scroll +5 units"
+		if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+			bind $entry <MouseWheel> "$text_widget yview scroll \[expr {-(%D)}\] units"
+		}
 		if {$type == {hex}} {
 			bind $entry <Key-Right>	"
 				focus $text_widget.dec_entry_${i}

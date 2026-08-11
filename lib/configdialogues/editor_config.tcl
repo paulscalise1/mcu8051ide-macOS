@@ -648,6 +648,9 @@ namespace eval editor {
 				if {[winfo exists $listBox.c]} {
 					bind $listBox.c <Button-5> {%W yview scroll +5 units; break}
 					bind $listBox.c <Button-4> {%W yview scroll -5 units; break}
+					if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+						bind $listBox.c <MouseWheel> {%W yview scroll [expr {-(%D)}] units; break}
+					}
 				}
 
 				# Create size listbox
@@ -674,6 +677,9 @@ namespace eval editor {
 				if {[winfo exists $listBox.c]} {
 					bind $listBox.c <Button-5> {%W yview scroll +5 units; break}
 					bind $listBox.c <Button-4> {%W yview scroll -5 units; break}
+					if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+						bind $listBox.c <MouseWheel> {%W yview scroll [expr {-(%D)}] units; break}
+					}
 				}
 
 				# Create sample text entry

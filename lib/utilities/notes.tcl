@@ -450,6 +450,10 @@ class Notes {
 
 		bind $canvas_widget <Button-4> "$this canvas_zoom_in %x %y"
 		bind $canvas_widget <Button-5> "$this canvas_zoom_out %x %y"
+		if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+			bind $canvas_widget <MouseWheel> "
+				if {%D > 0} {$this canvas_zoom_in %x %y} elseif {%D < 0} {$this canvas_zoom_out %x %y}"
+		}
 
 		## Create bottom frame
 		 # Create the frame
