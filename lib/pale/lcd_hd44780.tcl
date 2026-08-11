@@ -219,6 +219,8 @@ class LcdHD44780 {
 	private variable cgram_photo		{}	;# PhotoImage: displayed CGRAM viewer bitmap (placed on canvas)
 	private variable cgram_photo_item	{}	;# Canvas item ID for the cgram_photo image item
 	private variable cgram_photo_scratch	{}	;# PhotoImage: off-screen scratch for CGRAM viewer
+	private variable lcd_blank_photo	{}	;# PhotoImage: blank LCD dot grid template (for fast display clear)
+	private variable cgram_blank_photo	{}	;# PhotoImage: blank CGRAM dot grid template
 	private variable cgram_photo_x		0	;# Canvas x coordinate of cgram_photo image origin
 	private variable cgram_photo_y		0	;# Canvas y coordinate of cgram_photo image origin
 
@@ -292,6 +294,8 @@ class LcdHD44780 {
 		catch { image delete $lcd_photo_scratch }
 		catch { image delete $cgram_photo }
 		catch { image delete $cgram_photo_scratch }
+		catch { image delete $lcd_blank_photo }
+		catch { image delete $cgram_blank_photo }
 
 		# Destroy GUI
 		if {[winfo exists $win]} {
@@ -928,6 +932,10 @@ class LcdHD44780 {
 				-text $k -font $common_font
 		}
 		$cgram_photo copy $cgram_photo_scratch
+		# Snapshot of the blank grid, used by clear_cgram
+		catch {image delete $cgram_blank_photo}
+		set cgram_blank_photo [image create photo -width $photo_w -height $photo_h]
+		$cgram_blank_photo copy $cgram_photo_scratch
 	}
 
 	## Handle click on the CGRAM viewer PhotoImage (replaces per-pixel canvas bindings)
@@ -1125,6 +1133,10 @@ class LcdHD44780 {
 			}
 		}
 		$lcd_photo copy $lcd_photo_scratch
+		# Snapshot of the blank grid, used by clear_display
+		catch {image delete $lcd_blank_photo}
+		set lcd_blank_photo [image create photo -width $photo_w -height $photo_h]
+		$lcd_blank_photo copy $lcd_photo_scratch
 	}
 
 	## Create and show CGRAM hex. editor window
@@ -1563,6 +1575,8 @@ class LcdHD44780 {
 		$canvas_widget delete $lcd_photo_item
 		image delete $lcd_photo
 		image delete $lcd_photo_scratch
+		catch {image delete $lcd_blank_photo}
+		set lcd_blank_photo {}
 		set lcd_photo {}
 		set lcd_photo_item {}
 		set lcd_photo_scratch {}
@@ -2176,7 +2190,7 @@ class LcdHD44780 {
 
 		# Synchronize the CGRAM viewer
 		if {$cgram_photo_scratch != {}} {
-			$cgram_photo_scratch put $OFF_COLOR -to 0 0 [image width $cgram_photo_scratch] [image height $cgram_photo_scratch]
+			$cgram_photo_scratch copy $cgram_blank_photo
 			_schedule_cgram_flush
 		}
 
@@ -2251,7 +2265,7 @@ class LcdHD44780 {
 	## Ensure that that the LCD dot matrix is clear
 	 # @return void
 	private method clear_display {} {
-		$lcd_photo_scratch put $OFF_COLOR -to 0 0 [image width $lcd_photo_scratch] [image height $lcd_photo_scratch]
+		$lcd_photo_scratch copy $lcd_blank_photo
 		_schedule_lcd_flush
 	}
 
