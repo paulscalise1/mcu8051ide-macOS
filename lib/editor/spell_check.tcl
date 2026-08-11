@@ -945,7 +945,7 @@ proc refresh_available_dictionaries {} {
 		$m insert 2 command \
 			-command {::Editor::switch_SC_dictionary {System}} \
 			-label [mc "Use the system spell checker (macOS)"] \
-			-image ::ICONS::flag::empty \
+			-image ::ICONS::16::spellcheck \
 			-compound left
 	}
 
@@ -1144,6 +1144,15 @@ proc adjust_spell_checker_config_button {} {
 	## Spell checker is ENABLED
 	} else {
 		$m entryconfigure [mc "Turn off spell checking"] -state normal
+
+		# The macOS "System" pseudo-dictionary has no country flag --
+		# show the spell checker icon instead of an empty flag box
+		if {${::Editor::spellchecker_dictionary} eq {System}} {
+			.statusbarSB configure \
+				-image ::ICONS::16::spellcheck \
+				-text [mc "System"]
+			return
+		}
 
 		set c_l [split ${::Editor::spellchecker_dictionary} {_}]
 		set idx [lsearch -ascii -exact -index 1 ${::Editor::COUNTRY_CODES_AND_FLAGS} [lindex $c_l 1]]
