@@ -899,8 +899,8 @@ class LcdHD44780 {
 		set photo_h [expr {8 * $col_step}]
 		set cgram_photo [image create photo -width $photo_w -height $photo_h]
 		set cgram_photo_scratch [image create photo -width $photo_w -height $photo_h]
-		$cgram_photo_scratch put $OFF_COLOR -to 0 0 $photo_w $photo_h
-		$cgram_photo copy $cgram_photo_scratch
+		# White background shows through the separators between the dots
+		$cgram_photo_scratch put {#FFFFFF} -to 0 0 $photo_w $photo_h
 		set cgram_photo_item [$canvas_widget create image $x_offset $y_offset -anchor nw -image $cgram_photo]
 		set cgram_photo_x $x_offset
 		set cgram_photo_y $y_offset
@@ -908,14 +908,16 @@ class LcdHD44780 {
 		# Bind Button-1 on the cgram photo item; coordinate math identifies which pixel was clicked
 		$canvas_widget bind $cgram_photo_item <Button-1> [list $this cgram_photo_click %x %y]
 
-		# Fill cgram_pixel coordinate array and draw character number labels
+		# Fill cgram_pixel coordinate array (drawing every dot in its blank
+		# state) and draw character number labels
 		for {set k 0} {$k < 8} {incr k} {
 			for {set i 0} {$i < 8} {incr i} {
 				for {set j 0} {$j < 5} {incr j} {
-					set cgram_pixel($k,$j,$i) [list \
-						[expr {$k * $char_step + $j * $col_step}] \
-						[expr {$i * $col_step}] \
-					]
+					set px [expr {$k * $char_step + $j * $col_step}]
+					set py [expr {$i * $col_step}]
+					set cgram_pixel($k,$j,$i) [list $px $py]
+					$cgram_photo_scratch put $OFF_COLOR -to $px $py \
+						[expr {$px + $square_size}] [expr {$py + $square_size}]
 				}
 			}
 			# Character number label below the pixel grid
@@ -925,6 +927,7 @@ class LcdHD44780 {
 				-fill #000000			\
 				-text $k -font $common_font
 		}
+		$cgram_photo copy $cgram_photo_scratch
 	}
 
 	## Handle click on the CGRAM viewer PhotoImage (replaces per-pixel canvas bindings)
@@ -1092,8 +1095,9 @@ class LcdHD44780 {
 		set photo_h [expr {$display_height * $row_step}]
 		set lcd_photo [image create photo -width $photo_w -height $photo_h]
 		set lcd_photo_scratch [image create photo -width $photo_w -height $photo_h]
-		$lcd_photo_scratch put $OFF_COLOR -to 0 0 $photo_w $photo_h
-		$lcd_photo copy $lcd_photo_scratch
+		# White background shows through the separators between the dots,
+		# recreating the visible dot grid of the original renderer
+		$lcd_photo_scratch put {#FFFFFF} -to 0 0 $photo_w $photo_h
 		set lcd_photo_item [$canvas_widget create image \
 			[expr {$x_offset + $sep2}] [expr {$y_offset + $sep2}] \
 			-anchor nw -image $lcd_photo \
@@ -1105,19 +1109,22 @@ class LcdHD44780 {
 			-outline {#000000} -width 1 \
 		]
 
-		# Fill lcd_pixel array with {px py} coordinates relative to photo origin.
+		# Fill lcd_pixel array with {px py} coordinates relative to photo
+		# origin, and draw every dot in its blank state.
 		for {set row 0} {$row < $display_height} {incr row} {
 			for {set col 0} {$col < $display_width} {incr col} {
 				for {set i 0} {$i < $char_rows} {incr i} {
 					for {set j 0} {$j < 5} {incr j} {
-						set lcd_pixel($col,$row,$j,$i) [list \
-							[expr {$col * $col_step + $j * $dot_step}] \
-							[expr {$row * $row_step + $i * $dot_step}] \
-						]
+						set px [expr {$col * $col_step + $j * $dot_step}]
+						set py [expr {$row * $row_step + $i * $dot_step}]
+						set lcd_pixel($col,$row,$j,$i) [list $px $py]
+						$lcd_photo_scratch put $OFF_COLOR -to $px $py \
+							[expr {$px + $square_size}] [expr {$py + $square_size}]
 					}
 				}
 			}
 		}
+		$lcd_photo copy $lcd_photo_scratch
 	}
 
 	## Create and show CGRAM hex. editor window
