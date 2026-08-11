@@ -473,6 +473,14 @@ class ModernNoteBookClass {
 		if {$raisecmd != {}} {
 			uplevel #0 $raisecmd
 		}
+
+		# macOS: restacking frames does not always trigger a repaint of
+		# the newly exposed page -- without this nudge it can stay gray
+		# until the next real input event (e.g. mouse motion) arrives
+		if {[tk windowingsystem] eq {aqua}} {
+			::aqua_force_redraw [$pages_area_frame getframe $page]
+			update idletasks
+		}
 	}
 
 	private method redraw_tab_bar {{only_compute 0}} {

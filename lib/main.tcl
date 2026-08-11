@@ -430,6 +430,32 @@ proc text_class_binding {event_str} {
 rename mcu8051ide_bind bind
 # ------------------------------------------------------------------------------
 
+## macOS: schedule a repaint of the given widget and all its descendants
+ #
+ # On Aqua, restacking sibling frames (how notebook pages are switched) does
+ # not always make the newly exposed widgets repaint -- the page can stay
+ # gray until the next real input event (e.g. mouse motion) arrives.  A
+ # synthetic <Expose> makes each widget schedule its redraw the same way a
+ # real expose from the window system would.
+ #
+ # @parm Widget w - Root of the widget tree to repaint
+ # @return void
+proc aqua_force_redraw {w} {
+	if {![winfo exists $w]} {
+		return
+	}
+	if {[winfo ismapped $w]} {
+		catch {
+			event generate $w <Expose> -x 0 -y 0 \
+				-width [winfo width $w] -height [winfo height $w]
+		}
+	}
+	foreach child [winfo children $w] {
+		aqua_force_redraw $child
+	}
+}
+# ------------------------------------------------------------------------------
+
 # Load base config file
 # -----------------------------
 
