@@ -284,7 +284,7 @@ class SFRWatches {
 			<B2-Motion>		<Button-5>	<Button-4>
 			<MouseWheel>
 		} {
-			bind $text_widget $event [bind Text $event]
+			bind $text_widget $event [text_class_binding $event]
 		}
 		bind $text_widget <Button-1>	\
 			"$this sfr_watches_select_line 0 \[expr {int(\[%W index @%x,%y\])}\] hex"

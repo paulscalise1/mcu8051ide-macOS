@@ -89,7 +89,7 @@ bind Text <Control-i>		{}
 bind Text <Control-f>		{}
 bind Text <F3>			{}
 bind Text <Insert>		{}
-bind Text <KP_Enter>		"[bind Text <Return>]; break"
+bind Text <KP_Enter>		"[text_class_binding <Return>]; break"
 bind Text <Control-Key-z>	{catch {%W edit undo}; break}
 bind Text <Control-Key-Z>	{catch {%W edit redo}; break}
 bind Text <Control-Key-c>	{tk_textCopy %W; break}

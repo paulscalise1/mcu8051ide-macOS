@@ -766,7 +766,7 @@ class Editor {
 				<Shift-MouseWheel>	<Option-MouseWheel>
 				<Shift-Option-MouseWheel>
 			} {
-				bind $editor $key [bind Text $key]
+				bind $editor $key [text_class_binding $key]
 		}
 
 		 # Scroll wheel
@@ -789,7 +789,7 @@ class Editor {
 				<Control-Key-T>
 			} {
 				bind $editor $key "
-					[bind Text $key]
+					[text_class_binding $key]
 					$this rightPanel_adjust \[expr {int(\[%W index insert\])}\]
 					$this recalc_status_counter {}
 					$this resetUpDownIndex
@@ -805,7 +805,7 @@ class Editor {
 		"
 		bind $editor <Double-Button-1> "
 			if {\[string is alnum -strict \[%W get insert-1c insert\]\]} {
-				[bind Text <Double-Button-1>]
+				[text_class_binding <Double-Button-1>]
 			}
 
 			$this rightPanel_adjust \[expr {int(\[%W index insert\])}\]
@@ -814,14 +814,14 @@ class Editor {
 			break"
 		bind $editor <Shift-Key-Down>	"
 			if {\[catch {$this shift_down}\]} {
-				[bind Text <Shift-Key-Down>]
+				[text_class_binding <Shift-Key-Down>]
 				$this rightPanel_adjust \[expr {int(\[%W index insert\])}\]
 				$this recalc_status_counter {}
 			}
 			break"
 		bind $editor <Shift-Key-Up>	"
 			if {\[catch {$this shift_up}\]} {
-				[bind Text <Shift-Key-Up>]
+				[text_class_binding <Shift-Key-Up>]
 				$this rightPanel_adjust \[expr {int(\[%W index insert\])}\]
 				$this recalc_status_counter {}
 			}
@@ -891,13 +891,13 @@ class Editor {
 		bind $editor <Control-Key-Next> "break"
 		bind $editor <Control-Key-Prior> "break"
 		bind $editor <Key-Left> "
-			[bind Text <Key-Left>]
+			[text_class_binding <Key-Left>]
 			$this resetUpDownIndex
 			$this recalc_status_counter {}
 			$this rightPanel_adjust \[expr {int(\[%W index insert\])}\]
 			break"
 		bind $editor <Key-Right> "
-			[bind Text <Key-Right>]
+			[text_class_binding <Key-Right>]
 			$this resetUpDownIndex
 			$this recalc_status_counter {}
 			$this rightPanel_adjust \[expr {int(\[%W index insert\])}\]
@@ -906,14 +906,14 @@ class Editor {
 			set ln \[expr {int(\[$editor index insert\])}\]
 
 			$this autocompletion_maybe_important_change \$ln.0 \$ln.0
-			[bind Text <Control-Key-t>]
+			[text_class_binding <Control-Key-t>]
 			$this resetUpDownIndex
 			$this parse \$ln
 			$this manage_autocompletion_list \$ln
 			update idletasks
 			break"
 		bind $editor <<PasteSelection>> "
-			[bind Text <<PasteSelection>>]
+			[text_class_binding <<PasteSelection>>]
 			$this resetUpDownIndex
 			$this recalc_left_frame
 			$this parse \[expr {int(\[$editor index insert\])}\]
@@ -924,14 +924,14 @@ class Editor {
 			# Check spelling on the line which we are now leaving
 			$this spellcheck_check_all \[expr {int(\[%W index insert\])}\]
 
-			[bind Text <Button-1>]
+			[text_class_binding <Button-1>]
 			$this rightPanel_adjust \[expr {int(\[%W index insert\])}\]
 			$this resetUpDownIndex
 			$this recalc_status_counter
 			focus -force $editor
 			break"
 		bind $editor <B1-Motion> "
-			[bind Text <B1-Motion>]
+			[text_class_binding <B1-Motion>]
 			$this rightPanel_adjust \[expr {int(\[%W index @%x,%y\])}\]
 			$this resetUpDownIndex
 			$this recalc_status_counter
@@ -967,10 +967,10 @@ class Editor {
 		bind $cmd_line <Shift-Left>	"if {!\[$this cmd_line_key SLeft\]} {break}"
 		bind $cmd_line <Shift-Right>	"if {!\[$this cmd_line_key SRight\]} {break}"
 		foreach keysym {Shift-Home Shift-End Up} {
-			bind $cmd_line <$keysym> "[bind Text <$keysym>];break"
+			bind $cmd_line <$keysym> "[text_class_binding <$keysym>];break"
 		}
 		foreach keysym {Undo Redo Cut Copy Paste} {
-			bind $cmd_line <<$keysym>> "[bind Text <<$keysym>>];break"
+			bind $cmd_line <<$keysym>> "[text_class_binding <<$keysym>>];break"
 		}
 
 		# Create bindings for defined key shortcuts

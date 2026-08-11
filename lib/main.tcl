@@ -374,6 +374,59 @@ proc mcu8051ide_bind args {
 		original_command_bind $widget $event_str $command
 	}
 }
+## Return the Text class binding script for the given event
+ #
+ # Since Tk 8.6 the Text class binds its editing actions to virtual events
+ # (e.g. <<PrevChar>> instead of <Key-Left>), so querying the physical event
+ # with [bind Text <Key-Left>] returns an empty script and every copied
+ # binding built that way silently does nothing.  This resolver falls back
+ # to the virtual event the physical sequence maps to on this platform, and
+ # finally to a small table of known equivalents whose physical trigger
+ # differs per platform (e.g. on Aqua word jumps are Option-arrows, not
+ # Control-arrows).
+ #
+ # @parm String event_str - Event, e.g. <Key-Left> or <Shift-Key-End>
+ # @return String - Text class binding script, or {}
+proc text_class_binding {event_str} {
+	set script [original_command_bind Text $event_str]
+	if {$script ne {}} {
+		return $script
+	}
+
+	# Determinate the canonical form of the event string
+	if {![winfo exists .tk_bind_probe]} {
+		frame .tk_bind_probe
+	}
+	original_command_bind .tk_bind_probe $event_str {#}
+	set canonical [lindex [original_command_bind .tk_bind_probe] 0]
+	original_command_bind .tk_bind_probe $event_str {}
+
+	# Look for a virtual event which the physical sequence maps to
+	foreach virtual [event info] {
+		if {[lsearch -exact [event info $virtual] $canonical] != -1} {
+			set script [original_command_bind Text $virtual]
+			if {$script ne {}} {
+				return $script
+			}
+		}
+	}
+
+	# Known equivalents with platform-dependent physical triggers
+	foreach {pattern replacement} {
+		<Control-Key-Left>		<<PrevWord>>
+		<Control-Key-Right>		<<NextWord>>
+		<Control-Shift-Key-Left>	<<SelectPrevWord>>
+		<Control-Shift-Key-Right>	<<SelectNextWord>>
+		<Control-Key-T>			<Control-Key-t>
+	} {
+		if {$event_str eq $pattern} {
+			return [original_command_bind Text $replacement]
+		}
+	}
+
+	return {}
+}
+
 rename mcu8051ide_bind bind
 # ------------------------------------------------------------------------------
 

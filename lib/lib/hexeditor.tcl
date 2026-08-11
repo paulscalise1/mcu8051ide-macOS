@@ -386,7 +386,7 @@ class HexEditor {
 				<B2-Motion>		<Button-5>	<Button-4>
 				<MouseWheel>		<<Copy>>	<Double-Button-1>
 			} {
-				bind $left_view $key "[bind Text $key]; break"
+				bind $left_view $key "[text_class_binding $key]; break"
 		}
 		bind $left_view <Double-Button-1> {break}
 		bind $left_view <Triple-Button-1> {break}
@@ -395,7 +395,7 @@ class HexEditor {
 		bind $left_view <Button-5> "$this scroll scroll +3 units"
 		bind $left_address_bar <Button-4> "$this scroll scroll -3 units"
 		bind $left_address_bar <Button-5> "$this scroll scroll +3 units"
-		bind $left_address_bar <MouseWheel> "[bind Text <MouseWheel>]; break"
+		bind $left_address_bar <MouseWheel> "[text_class_binding <MouseWheel>]; break"
 
 		## RIGHT PART
 		if {$ascii_view} {
@@ -415,7 +415,7 @@ class HexEditor {
 				Shift-Key-Left	Shift-Key-Right	Shift-Key-End
 			} {
 				bind $right_view <$event> "
-					[bind Text <$event>]
+					[text_class_binding <$event>]
 					$this right_view_adjust_cursor
 					break"
 			}
@@ -424,12 +424,12 @@ class HexEditor {
 			bind $right_view <Key-End>		"$this right_view_movement End"
 
 			bind $right_view <B1-Motion> "
-				[bind Text <B1-Motion>]
+				[text_class_binding <B1-Motion>]
 				$this right_view_adjust_cursor
 				$this text_view_leave
 				break"
 			bind $right_view <Key-BackSpace> "
-				[bind Text <Key-Left>]
+				[text_class_binding <Key-Left>]
 				$this right_view_adjust_cursor
 				break"
 			bind $right_view <Key-Menu>		"$this popup_menu right %x %y %X %Y; break"
@@ -455,7 +455,7 @@ class HexEditor {
 					<MouseWheel>		<<Copy>>	<Double-Button-1>
 					<B2-Motion>
 				} {
-					bind $right_view $key "[bind Text $key]; break"
+					bind $right_view $key "[text_class_binding $key]; break"
 			}
 			bind $right_view <Double-Button-1> {break}
 			bind $right_view <Triple-Button-1> {break}

@@ -229,7 +229,7 @@ class SubPrograms {
 			<B2-Motion>	<Button-5>	<Button-4>
 			<MouseWheel>
 		} {
-			bind $text_widget $event [bind Text $event]
+			bind $text_widget $event [text_class_binding $event]
 		}
 		bind $text_widget <Button-1> "$this subprograms_click %x %y"
 		bind $text_widget <ButtonRelease-3> "$this subprograms_popup %x %y %X %Y"
