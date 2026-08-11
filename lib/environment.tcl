@@ -1506,13 +1506,13 @@ proc makeStatusbar {txt} {
 	pack [frame .statusbarF -height 30p] -fill x -expand 0 -side bottom
 	pack [ttk::button .statusbarVB		\
 		-style TButton			\
-		-image ::ICONS::16::spellcheck	\
+		-image ::ICONS::16::ok		\
 		-compound left			\
 		-width 6			\
 	] -in .statusbarF -side left
-	DynamicHelp::add .statusbarVB -text [mc "Change level of syntax validation."]
+	DynamicHelp::add .statusbarVB -text [mc "Change level of syntax validation (click to cycle, right-click to lower)."]
 	bind .statusbarVB <Button-3> {change_validation_level {down}; break}
-	bind .statusbarVB <Button-1> {change_validation_level {up}; break}
+	bind .statusbarVB <Button-1> {change_validation_level {cycle}; break}
 
 	# This function was not yet ported to MS Windows
 	if {!$::MICROSOFT_WINDOWS} {
@@ -1568,7 +1568,11 @@ set status_bar_history {}	;# Sbar history
 proc change_validation_level {arg} {
 
 	# Parse parameter
-	if {$arg == {up}} {
+	if {$arg == {cycle}} {
+		# Cycle 0 -> 1 -> 2 -> 0 (single-button operation)
+		set ::CONFIG(VALIDATION_LEVEL) [expr {($::CONFIG(VALIDATION_LEVEL) + 1) % 3}]
+
+	} elseif {$arg == {up}} {
 		if {$::CONFIG(VALIDATION_LEVEL) == 2} {return}
 		incr ::CONFIG(VALIDATION_LEVEL)
 
@@ -1589,7 +1593,7 @@ proc change_validation_level {arg} {
 		.statusbarVB configure -text {OFF}
 		.statusbarVB configure -style RedBg.TButton
 		setStatusTip -widget .statusbarVB -text [mc "Syntax validation disabled"]
-		if {$arg == {up} || $arg == {down}} {
+		if {$arg == {up} || $arg == {down} || $arg == {cycle}} {
 			Sbar -freeze  [mc "Syntax validation disabled"]
 		}
 
@@ -1601,7 +1605,7 @@ proc change_validation_level {arg} {
 		.statusbarVB configure -text "   $::CONFIG(VALIDATION_LEVEL)"
 		.statusbarVB configure -style TButton
 		setStatusTip -widget .statusbarVB -text [mc "Current validation level: %s" $::CONFIG(VALIDATION_LEVEL)]
-		if {$arg == {up} || $arg == {down}} {
+		if {$arg == {up} || $arg == {down} || $arg == {cycle}} {
 			Sbar -freeze [mc "Current validation level: %s" $::CONFIG(VALIDATION_LEVEL)]
 		}
 
