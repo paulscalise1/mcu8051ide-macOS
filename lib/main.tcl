@@ -839,6 +839,20 @@ foreach program {
 if {${::tcl_platform(os)} eq {Darwin}} {
 	set ::PROGRAM_AVAILABLE(urxvt) 0
 }
+# macOS: the official Doxygen distribution installs the Doxywizard GUI as
+# /Applications/Doxywizard.app, which is never in PATH.  Detect it there and
+# remember to launch it via "open -a".
+set ::DOXYWIZARD_IS_MACOS_APP 0
+if {${::tcl_platform(os)} eq {Darwin} && !$::PROGRAM_AVAILABLE(doxywizard)} {
+	if {
+		[file isdirectory {/Applications/Doxywizard.app}]
+			||
+		[file isdirectory [file join ${::env(HOME)} {Applications/Doxywizard.app}]]
+	} then {
+		set ::PROGRAM_AVAILABLE(doxywizard) 1
+		set ::DOXYWIZARD_IS_MACOS_APP 1
+	}
+}
 time_in_msec	;# Print time info
 
 ## Load program sources

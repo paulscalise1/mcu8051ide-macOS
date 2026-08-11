@@ -10211,7 +10211,12 @@ namespace eval X {
 		variable compilation_in_progress	;# Bool: Compiler engaged
 
 		if {$doxygen_run_doxywizard} {
-			exec -- doxywizard Doxyfile &
+			if {$::DOXYWIZARD_IS_MACOS_APP} {
+				# macOS: Doxywizard.app is not in PATH; open it by name
+				exec -- open -a Doxywizard [file join [pwd] Doxyfile] &
+			} else {
+				exec -- doxywizard Doxyfile &
+			}
 		} elseif {$doxygen_build_api_doc} {
 			set doxygen_build_api_doc 0
 			if {[catch {
@@ -10296,12 +10301,23 @@ namespace eval X {
 
 		if {$project_menu_locked} {return}
 		if {!$::PROGRAM_AVAILABLE(doxywizard)} {
-			tk_messageBox		\
-				-parent .	\
-				-type ok	\
-				-icon warning	\
-				-title [mc "Unable to find doxywizard"]	\
-				-message [mc "Unable to find doxywizard. Please install doxygen and restart MCU 8051 IDE."]
+			if {${::tcl_platform(os)} eq {Darwin}} {
+				# The Homebrew "doxygen" package contains only the
+				# command line tool, not the Doxywizard GUI
+				tk_messageBox		\
+					-parent .	\
+					-type ok	\
+					-icon warning	\
+					-title [mc "Unable to find Doxywizard"]	\
+					-message [mc "Unable to find Doxywizard, the graphical front-end of Doxygen.\n\nThe Homebrew doxygen package contains only the command line tool. To get Doxywizard, install the official Doxygen application from https://www.doxygen.nl (it provides Doxywizard.app), then restart MCU 8051 IDE.\n\nNote: building the C API documentation needs only the doxygen command and works without Doxywizard."]
+			} else {
+				tk_messageBox		\
+					-parent .	\
+					-type ok	\
+					-icon warning	\
+					-title [mc "Unable to find doxywizard"]	\
+					-message [mc "Unable to find doxywizard. Please install doxygen and restart MCU 8051 IDE."]
+			}
 			return
 		}
 		set doxygen_run_doxywizard 1
