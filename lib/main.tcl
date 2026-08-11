@@ -1092,6 +1092,16 @@ if {[tk windowingsystem] eq {aqua}} {
 	}
 }
 
+# macOS: the system automatically adds an "<application> Help" item at the
+# top of the Help menu.  Without this hook it asks the Apple Help system for
+# a help book belonging to "tclsh", which does not exist.  Open the MCU 8051
+# IDE handbook instead.
+if {[tk windowingsystem] eq {aqua}} {
+	proc ::tk::mac::ShowHelp {} {
+		::X::__handbook
+	}
+}
+
 # Initialize file change notifications mechanism
 FSnotifications::init
 
