@@ -887,16 +887,14 @@ class RS232Debugger {
 				# macOS: serial devices appear as /dev/cu.* (call-out) and
 				# /dev/tty.* (dial-in).  Offer the cu.* devices, which do
 				# not block while waiting for a carrier signal.
-				$port_combobox configure -values \
-					[lsort -decreasing \
-						[glob -directory {/dev} -nocomplain -type {c} -- {cu.*}] \
-					]
+				set pattern {cu.*}
 			} else {
-				$port_combobox configure -values \
-					[lsort -decreasing \
-						[glob -directory {/dev} -nocomplain -type {c} -- {tty{S,USB}*}] \
-					]
+				set pattern {tty{S,USB}*}
 			}
+			$port_combobox configure -values \
+				[lsort -decreasing \
+					[glob -directory {/dev} -nocomplain -type {c} -- $pattern] \
+				]
 
 		} else { ;# Microsoft Widnows way
 			set available_ms_windows_ports [list]

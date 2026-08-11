@@ -39,6 +39,7 @@ class Notes {
 	public common count	0			;# Int: Counter of object instances
 	public common bgcolor	{#EEEE55}		;# Color: Background color for title bar and window border
 	public common bgcolor2	{#FFFF88}		;# Color: Background color for the canvas widget
+	public common wheel_zoom_time	0		;# Int: Time [ms] of the last wheel zoom step (macOS zoom rate limiting)
 	# Font: For inserted text
 	public common canvas_text_font [font create			\
 		-family $::DEFAULT_FIXED_FONT			\
@@ -451,8 +452,14 @@ class Notes {
 		bind $canvas_widget <Button-4> "$this canvas_zoom_in %x %y"
 		bind $canvas_widget <Button-5> "$this canvas_zoom_out %x %y"
 		if {[tk windowingsystem] eq {aqua}} { ;# Aqua sends <MouseWheel>, never Button-4/5
+			# Trackpads deliver dozens of momentum events per gesture and
+			# each zoom step scales by 1.5x, so limit the zoom rate: at
+			# most one step per 150 ms
 			bind $canvas_widget <MouseWheel> "
-				if {%D > 0} {$this canvas_zoom_in %x %y} elseif {%D < 0} {$this canvas_zoom_out %x %y}"
+				if {\[clock milliseconds\] - \$::Notes::wheel_zoom_time >= 150} {
+					set ::Notes::wheel_zoom_time \[clock milliseconds\]
+					if {%D > 0} {$this canvas_zoom_in %x %y} elseif {%D < 0} {$this canvas_zoom_out %x %y}
+				}"
 		}
 
 		## Create bottom frame

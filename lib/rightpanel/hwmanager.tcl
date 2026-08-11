@@ -36,11 +36,13 @@ set _HWMANAGER_TCL _
 
 class HwManager {
 	## COMMON
-	public common PLUGIN_SEARCH_PATHS [list \
-		/usr/share/mcu8051ide/hwplugins \
-		/usr/local/share/mcu8051ide/hwplugins \
-		${::INSTALLATION_DIR}/hwplugins \
-	]
+	# (normalized and deduplicated -- on an installed system the
+	#  installation directory is one of the standard paths already)
+	public common PLUGIN_SEARCH_PATHS [lsort -unique [list \
+		[file normalize /usr/share/mcu8051ide/hwplugins] \
+		[file normalize /usr/local/share/mcu8051ide/hwplugins] \
+		[file normalize ${::INSTALLATION_DIR}/hwplugins] \
+	]]
 	if {$::MICROSOFT_WINDOWS} {
 		set PLUGIN_SEARCH_PATHS [list ${::INSTALLATION_DIR}/hwplugins]
 	}

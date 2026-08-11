@@ -742,6 +742,16 @@ proc spellchecker_channel_readable {} {
 		catch {close $channel}
 		set ::Editor::spellchecker_channel {}
 		set ::Editor::spellchecker_process_pid {}
+		# Died before the start-up banner (e.g. the configured dictionary
+		# could not be loaded) -- report the start-up failure right away
+		# instead of letting wait_for_spellchecker_process block the GUI
+		# until the 10 s watch dog timer expires.  (The exit callback would
+		# treat RAP_ID == {} as an intentional termination and do nothing.)
+		if {${::Editor::spellchecker_RAP_ID} == {}} {
+			set ::Editor::spellchecker_start_failed 1
+			set ::Editor::spellchecker_started_flag 1
+			return
+		}
 		spellchecker_exit_callback
 		return
 	}
