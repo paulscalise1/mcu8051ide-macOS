@@ -1119,6 +1119,14 @@ if {[tk windowingsystem] eq {aqua}} {
 # Initialize file change notifications mechanism
 FSnotifications::init
 
+# When running from the macOS .app bundle, the compiled launcher runs this
+# script via Tcl_Main, which exits at stdin EOF as soon as the script returns
+# -- and LaunchServices provides no stdin.  Stay inside the event loop
+# forever instead; the application quits through X::__exit (exit) as usual.
+if {[info exists ::env(MCU8051IDE_RESOURCES)]} {
+	vwait ::mcu8051ide_run_forever
+}
+
 # >>> File inclusion guard
 }
 # <<< File inclusion guard

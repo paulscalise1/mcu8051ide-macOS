@@ -201,7 +201,7 @@ int main(int argc, char *argv[]) {
     snprintf(lib_dir,   sizeof(lib_dir),   "%s/lib",                        contents);
     snprintf(tcl_lib,   sizeof(tcl_lib),   "%s/lib/tcl8.6",                 contents);
     snprintf(tk_lib,    sizeof(tk_lib),    "%s/lib/tk8.6",                  contents);
-    snprintf(itcl_lib,  sizeof(itcl_lib),  "%s/lib/itcl4.3.6",              contents);
+    snprintf(itcl_lib,  sizeof(itcl_lib),  "%s/lib/@ITCL_PKG_NAME@",        contents);
     snprintf(main_tcl,  sizeof(main_tcl),  "%s/Resources/app/lib/main.tcl", contents);
     snprintf(resources, sizeof(resources), "%s/Resources",                  contents);
 
@@ -256,6 +256,11 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 C_SOURCE
+
+# Substitute the actual itcl package directory name (version-agnostic --
+# the copy step below globs it the same way)
+ITCL_PKG_NAME=$(basename "${ITCL_ARM64_PKG%/}")
+sed -i '' "s/@ITCL_PKG_NAME@/${ITCL_PKG_NAME}/" "${LAUNCHER_C}"
 
 # Compile against the bundled Tcl headers and link the shared libtcl
 if [ "${BUILD_UNIVERSAL}" = true ]; then
@@ -376,6 +381,9 @@ cp -R "${SCRIPT_DIR}/data"        "${APP_RES}/"
 cp -R "${SCRIPT_DIR}/icons"       "${APP_RES}/"
 cp -R "${SCRIPT_DIR}/doc"         "${APP_RES}/"
 [ -d "${SCRIPT_DIR}/translations" ] && cp -R "${SCRIPT_DIR}/translations" "${APP_RES}/"
+[ -d "${SCRIPT_DIR}/hwplugins" ] && cp -R "${SCRIPT_DIR}/hwplugins" "${APP_RES}/"
+[ -f "${SCRIPT_DIR}/LICENSE" ] && cp "${SCRIPT_DIR}/LICENSE" "${APP_RES}/"
+[ -f "${SCRIPT_DIR}/ChangeLog" ] && cp "${SCRIPT_DIR}/ChangeLog" "${APP_RES}/"
 
 # ── Create Info.plist ─────────────────────────────────────────────────────────
 echo "==> Creating Info.plist"
@@ -396,7 +404,7 @@ cat > "${CONTENTS}/Info.plist" << 'PLIST'
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleVersion</key>
-    <string>1.4.9</string>
+    <string>1.4.9-mt</string>
     <key>CFBundleShortVersionString</key>
     <string>1.4.9</string>
     <key>NSHighResolutionCapable</key>
