@@ -100,27 +100,30 @@ private method instruction_cycle {} {
 		}
 	}
 
-	# Send port states to PALE (Peripheral Abstraction Layer Engine)
-	set max $time
-	if {!$controllers_conf(X2)} {
-		set max [expr {$max * 2}]
-	}
-	for {set i 1} {$i < $max} {incr i} {
-		$this pale_simulation_cycle $ports_previous_state
-	}
-	set rmw_instruction 1
-	set ports_previous_state [list]
-	for {set i 0; set addr 128} {$i < 5} {incr i; incr addr 16} {
-		if {$feature_available(p$i)} {
-			lappend ports_previous_state $sfr($addr)
-		} else {
-			lappend ports_previous_state 0
-		}
-	}
-	$this pale_simulation_cycle $ports_previous_state
-
-	# Analog comparator controller
+	# Send port states to PALE (Peripheral Abstraction Layer Engine).
+	# The whole block is gated by one pale_is_enabled query -- without it
+	# every machine cycle costs several Itcl method dispatches which do
+	# nothing while no virtual hardware is engaged.
 	if {[$this pale_is_enabled]} {
+		set max $time
+		if {!$controllers_conf(X2)} {
+			set max [expr {$max * 2}]
+		}
+		for {set i 1} {$i < $max} {incr i} {
+			$this pale_simulation_cycle $ports_previous_state
+		}
+		set rmw_instruction 1
+		set ports_previous_state [list]
+		for {set i 0; set addr 128} {$i < 5} {incr i; incr addr 16} {
+			if {$feature_available(p$i)} {
+				lappend ports_previous_state $sfr($addr)
+			} else {
+				lappend ports_previous_state 0
+			}
+		}
+		$this pale_simulation_cycle $ports_previous_state
+
+		# Analog comparator controller
 		if {$controllers_conf(CEN)} {
 			anlcmp_controller
 		} else {
@@ -128,6 +131,8 @@ private method instruction_cycle {} {
 			$this pale_SLSF $PIN(ANL0) 0
 			$this pale_SLSF $PIN(ANL1) 0
 		}
+	} else {
+		set rmw_instruction 1
 	}
 
 	# UART controller

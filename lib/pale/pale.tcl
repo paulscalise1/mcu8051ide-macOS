@@ -342,15 +342,11 @@ class Pale {
 	public method pale_simulation_cycle args {
 		if {!$is_enabled} {return}
 
+		# Convert port states (bytes) to lists of binary digits using the
+		# precomputed table -- this method runs for every machine cycle
 		set ports [list]
 		foreach byte [lindex $args 0] {
-			set byte [NumSystem::dec2bin $byte]
-			set bin_len [string length $byte]
-			if {$bin_len < 8} {
-				set byte "[string repeat {0} [expr {8 - $bin_len}]]$byte"
-			}
-
-			lappend ports [split $byte {}]
+			lappend ports [lindex ${::PALE_DEC2BIN} $byte]
 		}
 		lappend portLatch $ports
 		incr instruction_cycles
@@ -1014,6 +1010,14 @@ class Pale {
 	public method pale_get_number_of_instruction_cycles {} {
 		return $instruction_cycles
 	}
+}
+
+# Precomputed byte -> {b7 b6 b5 b4 b3 b2 b1 b0} conversion table used by
+# pale_simulation_cycle (which runs for every simulated machine cycle);
+# equivalent to NumSystem::dec2bin zero-padded to 8 digits and split
+set ::PALE_DEC2BIN [list]
+for {set i 0} {$i < 256} {incr i} {
+	lappend ::PALE_DEC2BIN [split [format %08b $i] {}]
 }
 
 # >>> File inclusion guard
