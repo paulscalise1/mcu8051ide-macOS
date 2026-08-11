@@ -3071,10 +3071,13 @@ namespace eval toolbar {
 					-file "${::ROOT_DIRNAME}/icons/other/Moravia_Microsystems.png"	\
 				]	\
 			-style ToolButton.TButton	\
-			-command {::X::open_uri {http://www.moravia-microsystems.com/}}
+			-command {::X::open_uri {https://sourceforge.net/projects/mcu8051ide/}}
 		] -side right -padx 15
+		# NOTE: the original link (moravia-microsystems.com) is no longer
+		# controlled by the author's company and serves scam redirects;
+		# point to the project page on SourceForge instead
 		DynamicHelp::add .mainIconBar.company_logo	\
-			-text [mc "Visit webside of the Moravia Microsystems, s.r.o. company."]
+			-text [mc "Visit the MCU 8051 IDE project page."]
 
 		# Create hide button
 		pack [Label .mainIconBar.hide_label	\

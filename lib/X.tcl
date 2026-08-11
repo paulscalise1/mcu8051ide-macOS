@@ -6598,7 +6598,7 @@ namespace eval X {
 		] -fill y -side right
 		# fill in the about tab
 		$about_tab.text insert end "${::APPNAME}\n"
-		$about_tab.text insert end [mc "An open source IDE for MCS-51 based microconrollers for POSIX Systems, this software is licenced under the GNU GPL v2 licence. You can find more at the project web page http://www.moravia-microsystems.com/mcu-8051-ide/\n"]
+		$about_tab.text insert end [mc "An open source IDE for MCS-51 based microconrollers for POSIX Systems, this software is licenced under the GNU GPL v2 licence. You can find more at the project web page https://sourceforge.net/projects/mcu8051ide/\n"]
 		$about_tab.text insert end "\n(c) 2007, 2008, 2009, 2010, 2011, 2012 Martin Ošmera <mailto:martin.osmera@gmail.com>\n"
 		$about_tab.text insert end "\n(c) 2014 Moravia Micorsystems, s.r.o. <mailto:martin.osmera@moravia-microsystems.com>\n"
 		if {$::MICROSOFT_WINDOWS} {
