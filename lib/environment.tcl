@@ -194,21 +194,16 @@ if {$::CONFIG(WINDOW_ZOOMED)} {
 	}
 }
 wm protocol . WM_DELETE_WINDOW {::X::__exit}
-# On macOS, Tk may override the dock icon during initialization.
-# Proactively restore it using the full-resolution bundled PNG so the
-# dock shows the correct icon.  On other platforms use the loaded 16x16 icon.
+# On macOS the dock tile must come from the bundle's .icns alone -- setting
+# it at runtime via wm iconphoto ([NSApp setApplicationIconImage:]) replaces
+# the properly rendered bundle icon with the raw PNG, so Finder and the Dock
+# show two different icons (and the real one flashes back on quit).
 if {${::tcl_platform(os)} eq {Darwin}} {
-	if {[info exists ::env(MCU8051IDE_RESOURCES)]} {
-		set _icon_png [file join $::env(MCU8051IDE_RESOURCES) mcu8051ide.png]
-		if {[file exists $_icon_png]} {
-			image create photo ::MCU8051IDE_DOCK_ICON:: -file $_icon_png
-			wm iconphoto . ::MCU8051IDE_DOCK_ICON::
-		}
-	}
-	# On macOS Aqua, wm iconphoto on ANY toplevel calls [NSApp setApplicationIconImage:]
-	# regardless of which window it targets — every dialog icon call overwrites the
-	# dock tile with a 16x16 image.  Block all further iconphoto calls; the correct
-	# full-resolution icon was set above and macOS has no per-window dock icons.
+	# On macOS Aqua, wm iconphoto on ANY toplevel calls
+	# [NSApp setApplicationIconImage:] regardless of which window it
+	# targets — every dialog icon call would overwrite the dock tile with
+	# a 16x16 image.  Swallow all iconphoto calls; macOS has no
+	# per-window dock icons and the bundle provides the application icon.
 	rename wm ::__wm_orig
 	proc wm {subcmd args} {
 		if {$subcmd eq "iconphoto"} { return }
