@@ -423,17 +423,10 @@ PLIST
 
 # ── Build app icon (.icns) ────────────────────────────────────────────────────
 echo "==> Building app icon"
-# Prefer the pre-rendered macOS icon (1024 px, Big Sur style rounded
-# rectangle with transparent corners, generated from mcu8051ide2.jpg)
+# Pre-rendered macOS icon (1024 px, Big Sur style rounded rectangle with
+# transparent corners, generated from mcu8051ide2.jpg)
 ICON_SRC="${SCRIPT_DIR}/macos_icon.png"
-# Fallbacks: square legacy logo, then splash
-[ -f "${ICON_SRC}" ] || ICON_SRC="${SCRIPT_DIR}/mcu8051ide.png"
 [ -f "${ICON_SRC}" ] || ICON_SRC="${SCRIPT_DIR}/icons/other/splash.png"
-
-# Copy the icon PNG into Resources so the Tcl code can load it for wm iconphoto
-if [ -f "${SCRIPT_DIR}/mcu8051ide.png" ]; then
-    cp "${SCRIPT_DIR}/mcu8051ide.png" "${RESOURCES_DIR}/mcu8051ide.png"
-fi
 
 if [ -f "${ICON_SRC}" ]; then
     ICONSET_DIR="${BUILD_DIR}/MCU8051IDE.iconset"

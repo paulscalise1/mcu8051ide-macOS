@@ -70,7 +70,6 @@ FILE(GLOB translations translations/*)
 INSTALL(FILES ${translations} DESTINATION ${target_installation_directory}/translations)
 
 # Install .desktop spec and application icon
-INSTALL(FILES mcu8051ide.png DESTINATION share/pixmaps/)
 INSTALL(FILES mcu8051ide.desktop DESTINATION share/applications/)
 INSTALL(FILES mcu8051ide.appdata.xml DESTINATION share/appdata/)
 INSTALL(FILES application-x-mcu8051ide.xml DESTINATION share/mime/packages/)
