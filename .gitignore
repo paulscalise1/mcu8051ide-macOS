@@ -15,7 +15,7 @@ macos_packages/
 build/
 
 # Local publishing files (not part of the repository)
-dist.sh
+scripts/dist.sh
 distribution/
 
 # Scratch/debug images used during development

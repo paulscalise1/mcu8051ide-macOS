@@ -20,7 +20,8 @@
 set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PACKAGES_DIR="$SCRIPT_DIR/macos_packages"
+REPO_ROOT="$(dirname "${SCRIPT_DIR}")"
+PACKAGES_DIR="$REPO_ROOT/macos_packages"
 
 # ── Detect native (arm64) Homebrew prefix ─────────────────────────────────────
 if [ -d "/opt/homebrew" ]; then
@@ -121,7 +122,7 @@ _build_itcl() {
     echo "  Installing to $install_dir..."
     make install
 
-    cd "$SCRIPT_DIR"
+    cd "$REPO_ROOT"
 }
 
 if ls "$ITCL_LIB_DIR"/itcl*/pkgIndex.tcl 2>/dev/null | head -1 | grep -q pkgIndex; then
@@ -181,7 +182,7 @@ _build_tdom() {
     echo "  Installing to $install_dir..."
     make install
 
-    cd "$SCRIPT_DIR"
+    cd "$REPO_ROOT"
 }
 
 if ls "$TDOM_LIB_DIR"/tdom*/pkgIndex.tcl 2>/dev/null | head -1 | grep -q pkgIndex; then
@@ -210,7 +211,7 @@ if [ -n "$INTEL_BREW" ] && [ -d "$INTEL_TCL_PREFIX/lib" ]; then
         echo "  Building itcl4 for x86_64..."
         arch -x86_64 bash -c "
             export BASE_CFLAGS='${BASE_CFLAGS}'
-            SCRIPT_DIR='${SCRIPT_DIR}'
+            REPO_ROOT='${REPO_ROOT}'
             $(declare -f _build_itcl)
             _build_itcl '${ITCL_X86_BUILD_DIR}' '${ITCL_X86_INSTALL_DIR}' \
                 '${INTEL_TCL_PREFIX}/lib' '-arch x86_64'
@@ -224,7 +225,7 @@ if [ -n "$INTEL_BREW" ] && [ -d "$INTEL_TCL_PREFIX/lib" ]; then
         echo "  Building tdom for x86_64..."
         arch -x86_64 bash -c "
             export BASE_CFLAGS='${BASE_CFLAGS}'
-            SCRIPT_DIR='${SCRIPT_DIR}'
+            REPO_ROOT='${REPO_ROOT}'
             $(declare -f _build_tdom)
             _build_tdom '${TDOM_X86_BUILD_DIR}' '${TDOM_X86_INSTALL_DIR}' \
                 '${INTEL_TCL_PREFIX}/lib' '-arch x86_64'
@@ -301,5 +302,5 @@ TCLEOF
 # ── Done ──────────────────────────────────────────────────────────────────────
 echo ""
 echo "=== Setup complete ==="
-echo "Launch the IDE with:  ./run_macos.sh"
-echo "Build the .app with:  ./build_app.sh"
+echo "Launch the IDE with:  ./scripts/run_macos.sh"
+echo "Build the .app with:  ./scripts/build_app.sh"

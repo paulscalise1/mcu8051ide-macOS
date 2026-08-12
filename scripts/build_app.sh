@@ -1,9 +1,9 @@
 #!/bin/bash
 # build_app.sh — Build a self-contained MCU8051IDE.app bundle for macOS.
 #
-# Run from the repo root:  ./build_app.sh
+# Run from the repo root:  ./scripts/build_app.sh
 #
-# Prerequisites (installed by macos_setup.sh):
+# Prerequisites (installed by scripts/macos_setup.sh):
 #   - Homebrew tcl-tk@8
 #   - Homebrew bwidget
 #   - macos_packages/itcl/  (itcl 4.3.6 built from source)
@@ -16,7 +16,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-BUILD_DIR="${SCRIPT_DIR}/build"
+REPO_ROOT="$(dirname "${SCRIPT_DIR}")"
+BUILD_DIR="${REPO_ROOT}/build"
 APP_NAME="MCU8051IDE"
 APP_BUNDLE="${BUILD_DIR}/${APP_NAME}.app"
 CONTENTS="${APP_BUNDLE}/Contents"
@@ -44,8 +45,8 @@ BUILD_UNIVERSAL=false
 if [ "${BREW_PREFIX}" != "/usr/local" ] && [ -x "/usr/local/bin/brew" ]; then
     _intel_tcl="/usr/local/opt/tcl-tk@8"
     # Use glob — x86_64 and arm64 builds may produce different version numbers
-    _intel_itcl_dylib=$(ls "${SCRIPT_DIR}/macos_packages/itcl_x86_64/lib/itcl"*/libitcl*.dylib 2>/dev/null | head -1)
-    _intel_tdom_dylib=$(ls "${SCRIPT_DIR}/macos_packages/tdom_x86_64/lib/tdom"*/libtdom*.dylib 2>/dev/null | head -1)
+    _intel_itcl_dylib=$(ls "${REPO_ROOT}/macos_packages/itcl_x86_64/lib/itcl"*/libitcl*.dylib 2>/dev/null | head -1)
+    _intel_tdom_dylib=$(ls "${REPO_ROOT}/macos_packages/tdom_x86_64/lib/tdom"*/libtdom*.dylib 2>/dev/null | head -1)
     _intel_inc=""
     for _d in "${_intel_tcl}/include" "${_intel_tcl}/include/tcl-tk"; do
         [ -f "${_d}/tcl.h" ] && _intel_inc="${_d}" && break
@@ -65,7 +66,7 @@ fi
 check() {
     if [ ! -e "$1" ]; then
         echo "ERROR: Missing: $1"
-        echo "       Run ./macos_setup.sh first."
+        echo "       Run ./scripts/macos_setup.sh first."
         exit 1
     fi
 }
@@ -79,36 +80,36 @@ for d in "${TCL_PREFIX}/include" "${TCL_PREFIX}/include/tcl-tk"; do
 done
 if [ -z "${TCL_INCLUDE}" ]; then
     echo "ERROR: tcl.h not found under ${TCL_PREFIX}/include"
-    echo "       Run ./macos_setup.sh first."
+    echo "       Run ./scripts/macos_setup.sh first."
     exit 1
 fi
 # Find arm64 itcl/tdom package dirs and dylibs (version-agnostic)
-ITCL_ARM64_PKG=$(ls -d "${SCRIPT_DIR}/macos_packages/itcl/lib/itcl"*/ 2>/dev/null | head -1)
+ITCL_ARM64_PKG=$(ls -d "${REPO_ROOT}/macos_packages/itcl/lib/itcl"*/ 2>/dev/null | head -1)
 if [ -z "${ITCL_ARM64_PKG}" ]; then
     echo "ERROR: Missing: macos_packages/itcl/lib/itcl*/"
-    echo "       Run ./macos_setup.sh first."
+    echo "       Run ./scripts/macos_setup.sh first."
     exit 1
 fi
 ITCL_ARM64_DYLIB=$(ls "${ITCL_ARM64_PKG}"libitcl*.dylib 2>/dev/null | head -1)
 if [ -z "${ITCL_ARM64_DYLIB}" ]; then
     echo "ERROR: libitcl*.dylib not found in ${ITCL_ARM64_PKG}"
-    echo "       Run ./macos_setup.sh first."
+    echo "       Run ./scripts/macos_setup.sh first."
     exit 1
 fi
-TDOM_ARM64_PKG=$(ls -d "${SCRIPT_DIR}/macos_packages/tdom/lib/tdom"*/ 2>/dev/null | head -1)
+TDOM_ARM64_PKG=$(ls -d "${REPO_ROOT}/macos_packages/tdom/lib/tdom"*/ 2>/dev/null | head -1)
 if [ -z "${TDOM_ARM64_PKG}" ]; then
     echo "ERROR: Missing: macos_packages/tdom/lib/tdom*/"
-    echo "       Run ./macos_setup.sh first."
+    echo "       Run ./scripts/macos_setup.sh first."
     exit 1
 fi
 TDOM_ARM64_DYLIB=$(ls "${TDOM_ARM64_PKG}"libtdom*.dylib 2>/dev/null | head -1)
 if [ -z "${TDOM_ARM64_DYLIB}" ]; then
     echo "ERROR: libtdom*.dylib not found in ${TDOM_ARM64_PKG}"
-    echo "       Run ./macos_setup.sh first."
+    echo "       Run ./scripts/macos_setup.sh first."
     exit 1
 fi
-check "${SCRIPT_DIR}/macos_packages/tcllib/md5/pkgIndex.tcl"
-check "${SCRIPT_DIR}/macos_stubs/img_png_stub/pkgIndex.tcl"
+check "${REPO_ROOT}/macos_packages/tcllib/md5/pkgIndex.tcl"
+check "${REPO_ROOT}/macos_stubs/img_png_stub/pkgIndex.tcl"
 
 BWIDGET_PKGINDEX=$(find "${BREW_PREFIX}/Cellar/bwidget" -maxdepth 4 \
     -name "pkgIndex.tcl" 2>/dev/null | head -1)
@@ -369,21 +370,21 @@ if [ "${BUILD_UNIVERSAL}" = true ]; then
 fi
 
 echo "==> Copying md5"
-cp -R "${SCRIPT_DIR}/macos_packages/tcllib/md5" "${LIB_DIR}/"
+cp -R "${REPO_ROOT}/macos_packages/tcllib/md5" "${LIB_DIR}/"
 
 echo "==> Copying img::png stub"
-cp -R "${SCRIPT_DIR}/macos_stubs/img_png_stub" "${LIB_DIR}/"
+cp -R "${REPO_ROOT}/macos_stubs/img_png_stub" "${LIB_DIR}/"
 
 # ── Copy app source ───────────────────────────────────────────────────────────
 echo "==> Copying app source"
-cp -R "${SCRIPT_DIR}/lib"         "${APP_RES}/"
-cp -R "${SCRIPT_DIR}/data"        "${APP_RES}/"
-cp -R "${SCRIPT_DIR}/icons"       "${APP_RES}/"
-cp -R "${SCRIPT_DIR}/doc"         "${APP_RES}/"
-[ -d "${SCRIPT_DIR}/translations" ] && cp -R "${SCRIPT_DIR}/translations" "${APP_RES}/"
-[ -d "${SCRIPT_DIR}/hwplugins" ] && cp -R "${SCRIPT_DIR}/hwplugins" "${APP_RES}/"
-[ -f "${SCRIPT_DIR}/LICENSE" ] && cp "${SCRIPT_DIR}/LICENSE" "${APP_RES}/"
-[ -f "${SCRIPT_DIR}/ChangeLog" ] && cp "${SCRIPT_DIR}/ChangeLog" "${APP_RES}/"
+cp -R "${REPO_ROOT}/lib"         "${APP_RES}/"
+cp -R "${REPO_ROOT}/data"        "${APP_RES}/"
+cp -R "${REPO_ROOT}/icons"       "${APP_RES}/"
+cp -R "${REPO_ROOT}/doc"         "${APP_RES}/"
+[ -d "${REPO_ROOT}/translations" ] && cp -R "${REPO_ROOT}/translations" "${APP_RES}/"
+[ -d "${REPO_ROOT}/hwplugins" ] && cp -R "${REPO_ROOT}/hwplugins" "${APP_RES}/"
+[ -f "${REPO_ROOT}/LICENSE" ] && cp "${REPO_ROOT}/LICENSE" "${APP_RES}/"
+[ -f "${REPO_ROOT}/ChangeLog" ] && cp "${REPO_ROOT}/ChangeLog" "${APP_RES}/"
 
 # ── Create Info.plist ─────────────────────────────────────────────────────────
 echo "==> Creating Info.plist"
@@ -425,8 +426,8 @@ PLIST
 echo "==> Building app icon"
 # Pre-rendered macOS icon (1024 px, Big Sur style rounded rectangle with
 # transparent corners, generated from mcu8051ide2.jpg)
-ICON_SRC="${SCRIPT_DIR}/macos_icon.png"
-[ -f "${ICON_SRC}" ] || ICON_SRC="${SCRIPT_DIR}/icons/other/splash.png"
+ICON_SRC="${REPO_ROOT}/macos_icon.png"
+[ -f "${ICON_SRC}" ] || ICON_SRC="${REPO_ROOT}/icons/other/splash.png"
 
 if [ -f "${ICON_SRC}" ]; then
     ICONSET_DIR="${BUILD_DIR}/MCU8051IDE.iconset"

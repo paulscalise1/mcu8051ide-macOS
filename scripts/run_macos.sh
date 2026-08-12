@@ -3,6 +3,7 @@
 # Run ./macos_setup.sh once before using this script.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(dirname "${SCRIPT_DIR}")"
 
 # Detect Homebrew prefix (Apple Silicon vs Intel)
 if [ -d "/opt/homebrew" ]; then
@@ -13,7 +14,7 @@ fi
 
 TCL_PREFIX="$BREW_PREFIX/opt/tcl-tk@8"
 TCLSH="$TCL_PREFIX/bin/tclsh8.6"
-PACKAGES_DIR="$SCRIPT_DIR/macos_packages"
+PACKAGES_DIR="$REPO_ROOT/macos_packages"
 
 if [ ! -x "$TCLSH" ]; then
     echo "Error: Tcl/Tk 8.6 not found at $TCLSH"
@@ -52,9 +53,9 @@ add_path "$PACKAGES_DIR/tdom/lib"
 add_path "$PACKAGES_DIR/tcllib/md5"
 
 # img::png stub (Tk 8.6 has built-in PNG support)
-add_path "$SCRIPT_DIR/macos_stubs/img_png_stub"
+add_path "$REPO_ROOT/macos_stubs/img_png_stub"
 
 export TCLLIBPATH="$TCLLIBPATH_LIST"
 
 # ── Launch ────────────────────────────────────────────────────────────────────
-exec "$TCLSH" "$SCRIPT_DIR/lib/main.tcl" "$@"
+exec "$TCLSH" "$REPO_ROOT/lib/main.tcl" "$@"

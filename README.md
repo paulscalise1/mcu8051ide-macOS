@@ -31,7 +31,7 @@ brew install sdcc
 ### Step 1 — Install the dependencies
 
 ```bash
-./macos_setup.sh
+./scripts/macos_setup.sh
 ```
 
 This script installs the Homebrew packages `tcl-tk@8` and `bwidget`. It also compiles `itcl` and `tdom` from source into `macos_packages/`. This step is necessary one time only.
@@ -39,7 +39,7 @@ This script installs the Homebrew packages `tcl-tk@8` and `bwidget`. It also com
 ### Step 2 — Build the application bundle
 
 ```bash
-./build_app.sh
+./scripts/build_app.sh
 ```
 
 This script makes `build/MCU8051IDE.app`. The bundle is self-contained. The target machine does not need Tcl/Tk. The target machine needs SDCC only for C compilation.
@@ -63,7 +63,7 @@ Then do Step 1 and Step 2 again. Without Intel Homebrew, the bundle is arm64 onl
 ### Run from the repository
 
 ```bash
-./run_macos.sh
+./scripts/run_macos.sh
 ```
 
 This command starts the application without a bundle. Use it for development.
@@ -110,9 +110,9 @@ These functions have manual tests on macOS, in light mode and in dark mode:
 
 ### New files
 
-- `macos_setup.sh` — installs the dependencies
-- `build_app.sh` — builds the application bundle
-- `run_macos.sh` — starts the application from the repository
+- `scripts/macos_setup.sh` — installs the dependencies
+- `scripts/build_app.sh` — builds the application bundle
+- `scripts/run_macos.sh` — starts the application from the repository
 - `macos_stubs/img_png_stub/` — replaces the `img::png` package; Tk 8.6 reads PNG natively
 - `lib/editor/macos_native_spell.js` — connects the spell checker to the macOS spell service
 - `macos_icon.png`, `mcu8051ide2.jpg` — application icon and icon source art
