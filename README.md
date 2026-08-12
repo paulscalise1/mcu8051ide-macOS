@@ -8,6 +8,14 @@ MCU 8051 IDE is an integrated development environment for microcontrollers of th
 
 ## Download and installation
 
+### With Homebrew
+
+```bash
+brew install --cask paulscalise1/mcu8051ide/mcu8051ide
+```
+
+### Manual download
+
 1. Open the [Releases](../../releases) page.
 2. Download the DMG file from the latest release.
 3. Open the DMG file.
