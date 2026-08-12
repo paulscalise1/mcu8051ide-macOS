@@ -12,9 +12,6 @@ MCU 8051 IDE is an integrated development environment for microcontrollers of th
 2. Download the DMG file from the latest release.
 3. Open the DMG file.
 4. Move **MCU8051IDE** to the Applications folder.
-5. Before the first start, right-click the application and select **Open**.
-
-macOS shows a warning at the first start. This occurs because the application is not notarized. The **Open** command in the right-click menu bypasses this warning.
 
 To compile C code, install SDCC:
 

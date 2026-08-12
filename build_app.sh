@@ -467,4 +467,4 @@ else
 fi
 echo ""
 echo "To install: drag MCU8051IDE.app from build/ to /Applications"
-echo "First launch: right-click → Open (Gatekeeper bypass for unsigned app)"
+echo "For distribution: run ./dist.sh to sign, notarize, and package the DMG"
