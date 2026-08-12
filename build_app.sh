@@ -467,4 +467,3 @@ else
 fi
 echo ""
 echo "To install: drag MCU8051IDE.app from build/ to /Applications"
-echo "For distribution: run ./dist.sh to sign, notarize, and package the DMG"
