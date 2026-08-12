@@ -1,49 +1,59 @@
-# MCU 8051 IDE - macOS Port (v1.4.9-mt)
+# MCU 8051 IDE for macOS (v1.4.9-mt)
 
-A maintained fork of [MCU 8051 IDE](http://mcu8051ide.sourceforge.net/) - an integrated development environment for MCS-51 based microcontrollers (8051 family). Written in Tcl/Tk.
+MCU 8051 IDE is an integrated development environment for microcontrollers of the MCS-51 (8051) family. Martin Ošmera wrote the original application in Tcl/Tk for Linux. This fork gives full macOS support. The application installs as one self-contained `.app` bundle. This fork also contains many macOS bug fixes.
 
-This fork adds full **macOS support** as a self-contained `.app` bundle, along with a number of macOS-specific bug fixes accumulated during porting.
-
-> **Status:** The macOS port is functional but not exhaustively tested. There are likely bugs in less-travelled code paths that have not yet been encountered. Testing, bug reports, and pull requests are welcome.
+**Status:** The macOS port is functional. Some functions do not have full tests. Please report bugs. Pull requests are welcome.
 
 ---
 
-## Download
+## Download and installation
 
-Pre-built universal binaries (Apple Silicon + Intel) are available on the [Releases](../../releases) page.
+1. Open the [Releases](../../releases) page.
+2. Download the DMG file from the latest release.
+3. Open the DMG file.
+4. Move **MCU8051IDE** to the Applications folder.
+5. Before the first start, right-click the application and select **Open**.
 
-1. Download `MCU8051IDE-1.4.9.dmg` from the latest release
-2. Open the DMG and drag **MCU8051IDE** to your Applications folder
+macOS shows a warning at the first start. This occurs because the application is not notarized. The **Open** command in the right-click menu bypasses this warning.
 
-SDCC must be installed separately if you want to compile C code: `brew install sdcc`
+To compile C code, install SDCC:
+
+```bash
+brew install sdcc
+```
 
 ---
 
-## macOS - Quick Start
+## Build from source
 
 ### Prerequisites
 
 - macOS 12 (Monterey) or later
 - [Homebrew](https://brew.sh)
-- SDCC (if you want to compile C code): `brew install sdcc`
 
-### 1. Install dependencies (one time)
+### Step 1 — Install the dependencies
 
 ```bash
 ./macos_setup.sh
 ```
 
-This installs Homebrew packages (`tcl-tk@8`, `bwidget`) and builds `itcl` and `tdom` from source into `macos_packages/` (gitignored). Takes a few minutes.
+This script installs the Homebrew packages `tcl-tk@8` and `bwidget`. It also compiles `itcl` and `tdom` from source into `macos_packages/`. This step is necessary one time only.
 
-### 2. Build the app bundle
+### Step 2 — Build the application bundle
 
 ```bash
 ./build_app.sh
 ```
 
-This produces `build/MCU8051IDE.app`, a fully self-contained bundle. No Tcl/Tk installation is required on the target machine. SDCC must be installed separately.
+This script makes `build/MCU8051IDE.app`. The bundle is self-contained. The target machine does not need Tcl/Tk. The target machine needs SDCC only for C compilation.
 
-**Universal binary (arm64 + x86_64):** If you have Intel Homebrew installed under Rosetta 2, `macos_setup.sh` will build x86_64 versions of `itcl` and `tdom` automatically, and `build_app.sh` will detect them and produce a universal binary that runs natively on both Apple Silicon and Intel Macs. To install Intel Homebrew:
+### Step 3 — Install the application
+
+Move `build/MCU8051IDE.app` to the Applications folder.
+
+### Universal binary
+
+The build makes a universal binary (Apple Silicon and Intel) when Intel Homebrew is available. To install Intel Homebrew:
 
 ```bash
 arch -x86_64 /bin/bash -c \
@@ -51,96 +61,104 @@ arch -x86_64 /bin/bash -c \
 arch -x86_64 /usr/local/bin/brew install tcl-tk@8
 ```
 
-Then re-run `./macos_setup.sh` and `./build_app.sh`. Without Intel Homebrew, the bundle is arm64-only and Intel Macs must use Rosetta 2.
+Then do Step 1 and Step 2 again. Without Intel Homebrew, the bundle is arm64 only. Intel Macs then use Rosetta 2.
 
-### 3. Install / run
+### Run from the repository
 
-Drag `build/MCU8051IDE.app` to `/Applications`, then right-click and select **Open** on first launch (Gatekeeper bypass for ad-hoc signed apps).
+```bash
+./run_macos.sh
+```
 
----
-
-## macOS - What Works
-
-The following features have been tested and confirmed working on macOS in dark mode and light mode:
-
-| Feature | Status |
-|---|---|
-| App launch, window management, menus | Working |
-| Code editor (syntax highlighting, line numbers, icon border) | Working |
-| macOS keyboard shortcuts (Cmd+C / Cmd+V / Cmd+X / Cmd+Z / Cmd+A) | Working |
-| Project management (open, close, save, recent files) | Working |
-| Simulator: step, step-over, run, animate, stop | Working |
-| Simulator: breakpoints, SFR watch, stack monitor | Working |
-| PALE virtual hardware: LED panel | Working |
-| PALE virtual hardware: LED display, LED matrix | Working |
-| PALE virtual hardware: Multiplexed LED display | Working |
-| PALE virtual hardware: Matrix keypad, Simple keypad | Working |
-| PALE virtual hardware: LCD HD44780 (4-bit and 8-bit) | Working |
-| PALE virtual hardware: DS1620 temperature sensor | Working |
-| Compiler integration: SDCC (C compiler) | Working |
-| Compiler integration: ASEM-51, ASL assemblers | Working |
-| Help menu: project page, bug report, SDCC manual, ASEM-51 manual | Working |
-| Dark mode: all canvas labels and widget text visible | Working |
-| Dock icon: static, correct icon throughout app lifetime | Working |
-| Menu bar app name: shows "MCU8051IDE" (not "tclsh") | Working |
-| User config stored in `~/.mcu8051ide/` (fresh for new users) | Working |
-
-## macOS - Known Limitations
-
-| Feature | Status |
-|---|---|
-| Embedded terminal panel (requires `urxvt`, X11-only) | Not available |
-| Spell checker (requires `send` IPC, X11-only) | Disabled |
-| "Aqua" widget style in preferences | Hidden (incompatible with app color scheme) |
-| TclX / signal handling | Skipped (optional, app runs without it) |
+This command starts the application without a bundle. Use it for development.
 
 ---
 
-## macOS - Changes from Upstream
+## Functions with tests on macOS
+
+These functions have manual tests on macOS, in light mode and in dark mode:
+
+| Function | Status |
+|---|---|
+| Application start, windows, and menus | Correct |
+| Code editor: syntax highlight, line numbers, icon border | Correct |
+| Code editor: cursor keys, selection keys, word-jump keys | Correct |
+| Keyboard shortcuts: Cmd+C, Cmd+V, Cmd+X, Cmd+Z, Cmd+A | Correct |
+| Context menus with a right-click or a two-finger tap | Correct |
+| Mouse wheel and trackpad scroll in all panels | Correct |
+| Spell check with the macOS system dictionaries | Correct |
+| Project management: open, close, save, recent files | Correct |
+| Simulator: step, step over, run, animate, stop | Correct |
+| Simulator: breakpoints, SFR watches, stack monitor | Correct |
+| Syntax validation level button | Correct |
+| Virtual hardware: LED panel, LED display, LED matrix | Correct |
+| Virtual hardware: multiplexed LED display | Correct |
+| Virtual hardware: matrix keypad, simple keypad | Correct |
+| Virtual hardware: LCD HD44780, 4-bit and 8-bit | Correct |
+| Virtual hardware: DS1620 temperature sensor | Correct |
+| Compilers: SDCC, ASEM-51, ASL | Correct |
+| Help menu and handbook | Correct |
+| Dock icon and menu bar name | Correct |
+| User configuration in `~/.mcu8051ide/` | Correct |
+
+## Known limitations
+
+- The embedded terminal panel is not available. The panel needs `urxvt` and X11 window embedding. macOS does not have X11 window embedding.
+- The "Aqua" widget style is not available in the preferences. The style does not agree with the application colors.
+- The application does not use TclX signal handlers. The application operates correctly without them.
+- The "Run doxywizard" function needs the Doxywizard application from [doxygen.nl](https://www.doxygen.nl). The Homebrew `doxygen` package does not contain Doxywizard.
+
+---
+
+## Changes from the upstream project
 
 ### New files
-- `macos_setup.sh` - one-time dependency installer
-- `build_app.sh` - builds the self-contained `.app` bundle
-- `run_macos.sh` - run directly from the repo without building the bundle
-- `macos_stubs/img_png_stub/` - satisfies `package require img::png`; Tk 8.6 has native PNG support
 
-### Bug fixes applied
+- `macos_setup.sh` — installs the dependencies
+- `build_app.sh` — builds the application bundle
+- `run_macos.sh` — starts the application from the repository
+- `macos_stubs/img_png_stub/` — replaces the `img::png` package; Tk 8.6 reads PNG natively
+- `lib/editor/macos_native_spell.js` — connects the spell checker to the macOS spell service
+- `macos_icon.png`, `mcu8051ide2.jpg` — application icon and icon source art
 
-**Event loop / AppKit**
-- All bare `update` calls changed to `update idletasks` to prevent AppKit reentrancy, except the three simulation run-loop sites in `engine_control.tcl` which must use bare `update` to deliver Stop-button click events
-- PALE `update idletasks` guarded by `sim_run_in_progress` to prevent thousands of Core Animation passes per second during fast simulation
-- LCD HD44780 hot path fully guarded: `write_to_log`, `update_entry_boxes`, `adjust_status_leds`, DDRAM/CGRAM hex editor updates, and canvas pixel ops all skip during `sim_run`
-- LCD canvas refactored from 1280+ individual rectangle items to two `PhotoImage` objects with a scratch-buffer/flush pattern, eliminating per-pixel `Tk_ImageChanged` callbacks
-- LCD pre-warm: first compositor pass (approx. 7s on first `update`) triggered during config load, not during simulation
+### Fixes for macOS
 
-**UI / display**
-- All PALE canvas `create text` items given explicit `-fill #000000`; without this, dark mode renders text as invisible (white on white)
-- `wm iconphoto` overridden on Darwin to prevent dialog icon calls from replacing the dock tile
-- Dock icon uses full-resolution `mcu8051ide.png`; `aqua` ttk theme filtered from preferences
-- `wm iconphoto .` guard replaced with a high-res icon setter; `wm iconphoto` shim blocks all subsequent calls on Darwin
+**Input**
+- The right mouse button and the middle mouse button operate correctly. Tk on macOS gives these buttons different numbers than X11.
+- The mouse wheel and the trackpad scroll all panels and lists.
+- The cursor keys, the selection keys, and the word-jump keys operate in the editor and in the hex editor. Tk 8.6 moved these functions to virtual events.
+- Shift+F3 and Shift+Tab operate. X11 keysyms translate to their macOS equivalents.
+- The Command key mirrors all Control shortcuts.
 
-**Input / keyboard**
-- Explicit `<Command-Key-v/x/c/z/Z/a>` bindings added to the editor for macOS clipboard and undo/redo
-- XF86/ISO keysym filter extended to Darwin
+**Spell check**
+- The spell checker connects to the macOS system spell service through `osascript`. It operates without Hunspell. When Hunspell and dictionaries are installed, the application can use them also.
 
-**Dialogs / grabs**
-- `update idletasks` added before `grab` calls throughout (window must be mapped before grab succeeds on Aqua)
-- `grab` and `focus -force` calls wrapped in `catch`
+**Display**
+- The event loop does not stall during fast simulation. All display updates in the simulation hot path stay away from the AppKit compositor.
+- The LCD display and the CGRAM viewer show the dot grid of the original renderer.
+- Notebook pages show immediately after a fast tab change.
+- Dark mode shows all canvas text.
+- The Dock shows one icon at all times. The icon comes from the bundle only.
 
-**OS integration**
-- `open_uri` uses macOS `open` command instead of `xdg-open`
-- SDCC manual URL updated to current PDF location
-- `ps -o pid --no-headers --ppid` (GNU-only) replaced with `pkill -KILL -P` / `pgrep -P` on Darwin
-- `aqua` widget theme blocked at startup if previously saved in config
+**Simulator speed**
+- The virtual hardware interface stops when no virtual hardware is open. This makes free-run simulation faster.
+- Port state conversion uses a precomputed table.
 
-**Build / packaging**
-- C launcher (`MCU8051IDE` binary) calls `Tcl_Main()` directly and never execs, keeping `NSProcessInfo.processName` as "MCU8051IDE" for the menu bar and dock association
+**Operating system**
+- URLs open with the macOS `open` command.
+- The serial port list shows `/dev/cu.*` devices.
+- The file dialog shows `/Volumes` for removable media.
+- The Help menu item "MCU8051IDE Help" opens the handbook.
+- Links to the expired `moravia-microsystems.com` domain point to the SourceForge project page now. The expired domain serves unsafe redirects.
+
+### Removed files
+
+This fork does not contain the Linux and Windows packaging files. The removed files include the freedesktop launcher, the AppStream metadata, the MIME registration, the CMake build files, and the `pkgs/` directory.
 
 ---
 
-## Original Project
+## The original project
 
 - **Author:** Martin Ošmera
 - **Homepage:** http://mcu8051ide.sourceforge.net
-- **License:** GPLv2 (see `LICENSE`)
-- **Supports:** AT89S, AT89C, AT89X, AT89LP series; DS89C4x0; Intel MCS-51 and compatible
+- **License:** GPLv2 — see `LICENSE`
+- **Supported microcontrollers:** AT89S, AT89C, AT89X, and AT89LP series; DS89C4x0; Intel MCS-51 and compatible types
