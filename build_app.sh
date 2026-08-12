@@ -423,9 +423,11 @@ PLIST
 
 # ── Build app icon (.icns) ────────────────────────────────────────────────────
 echo "==> Building app icon"
-# Always use the square app icon from the repo root for the .icns
-ICON_SRC="${SCRIPT_DIR}/mcu8051ide.png"
-# Fallback to splash if root icon is somehow missing
+# Prefer the pre-rendered macOS icon (1024 px, Big Sur style rounded
+# rectangle with transparent corners, generated from mcu8051ide2.jpg)
+ICON_SRC="${SCRIPT_DIR}/macos_icon.png"
+# Fallbacks: square legacy logo, then splash
+[ -f "${ICON_SRC}" ] || ICON_SRC="${SCRIPT_DIR}/mcu8051ide.png"
 [ -f "${ICON_SRC}" ] || ICON_SRC="${SCRIPT_DIR}/icons/other/splash.png"
 
 # Copy the icon PNG into Resources so the Tcl code can load it for wm iconphoto
